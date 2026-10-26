@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from itertools import chain
@@ -106,6 +107,7 @@ class PreparedContextBuild:
     origins: tuple[PreparedContextOrigin, ...]
     omissions: PreparedContextOmissions = PreparedContextOmissions()
     code_origins: tuple[CodeEvidenceRef, ...] = ()
+    fragments: tuple[SelectedMemoryFragment, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -118,6 +120,16 @@ class MemoryEntryAddress:
 
 
 PreparedContextOrigin = MemoryCitation | ArtifactRef | MemoryEntryAddress | ArtifactAddress
+
+
+@dataclass(frozen=True)
+class SelectedMemoryFragment:
+    """One literal span taken from a Memory entry."""
+
+    address: MemoryEntryAddress
+    start: int
+    end: int
+    text: str
 
 
 @dataclass(frozen=True)
@@ -211,6 +223,8 @@ class PreparedContextBuilder:
         profile_candidates: Sequence[PreparedProfileCandidate] = (),
         code_candidates: Sequence[PreparedCodeCandidate] = (),
     ) -> PreparedContextBuild:
+        if request.evidence_selection:
+            return self._select_evidence(request, memory_candidates)
         if request.include_code:
 
             def historical(history_request: PrepareContextRequest, entries: int) -> PreparedContextBuild:
@@ -292,6 +306,60 @@ class PreparedContextBuilder:
             truncated_items=omissions.truncated_items,
             dropped_items=omissions.dropped_items,
             unused_bytes=max(0, request.max_bytes - content_bytes),
+        )
+
+    def _select_evidence(
+        self,
+        request: PrepareContextRequest,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> PreparedContextBuild:
+        """Keep literal Memory spans that match the query and fit the full wire budget."""
+
+        if sum(len(candidates.hits) for candidates in memory_candidates) > self.memory_candidate_limit:
+            raise PreparedContextInvariantError("memory-candidate-limit")
+        query_terms = _evidence_terms(request.query)
+        candidates: list[tuple[int, int, SelectedMemoryFragment]] = []
+        for group in memory_candidates:
+            if not group.scope_id or group.memory_ref is None:
+                continue
+            seen: set[tuple[str, str]] = set()
+            for hit in group.hits:
+                if hit.memory_ref != group.memory_ref:
+                    raise PreparedContextInvariantError("memory-ref-mismatch")
+                identity = (hit.entry_id, hit.entry_version_id)
+                if identity in seen or not hit.text.strip():
+                    continue
+                seen.add(identity)
+                address = MemoryEntryAddress(
+                    memory=ArtifactAddress(scope_id=group.scope_id, artifact=hit.memory_ref),
+                    entry_id=hit.entry_id,
+                    entry_version_id=hit.entry_version_id,
+                )
+                for start, end, score in _evidence_spans(hit.text, query_terms):
+                    fragment = SelectedMemoryFragment(
+                        address=address, start=start, end=end, text=hit.text[start:end]
+                    )
+                    candidates.append((score, start, fragment))
+        candidates.sort(key=lambda item: (-item[0], item[1], item[2].address.entry_id))
+        chosen: list[SelectedMemoryFragment] = []
+        covered: dict[tuple[str, str], list[tuple[int, int]]] = {}
+        for _score, _start, fragment in candidates:
+            key = (fragment.address.entry_id, fragment.address.entry_version_id)
+            ranges = covered.setdefault(key, [])
+            if any(not (fragment.end <= left or fragment.start >= right) for left, right in ranges):
+                continue
+            trial = [*chosen, fragment]
+            if len(_render_evidence(trial).encode("utf-8")) > request.max_bytes:
+                continue
+            chosen.append(fragment)
+            ranges.append((fragment.start, fragment.end))
+        if not chosen:
+            return PreparedContextBuild(context=self.empty(), origins=(), fragments=())
+        content = _render_evidence(chosen)
+        return PreparedContextBuild(
+            context=PreparedContext(status="ready", content=content, content_bytes=len(content.encode("utf-8"))),
+            origins=tuple(fragment.address for fragment in chosen),
+            fragments=tuple(chosen),
         )
 
     def _select_entries(
@@ -683,6 +751,62 @@ def _interleave_groups(groups: Sequence[Sequence[_Item]]) -> tuple[_Item, ...]:
     for index in range(max((len(group) for group in groups), default=0)):
         ordered.extend(group[index] for group in groups if index < len(group))
     return tuple(ordered)
+
+
+_EVIDENCE_TERM = re.compile(r"[A-Za-z]+|\d+|[\u4e00-\u9fff]+")
+
+
+def _evidence_terms(text: str) -> tuple[str, ...]:
+    return tuple(match.group(0).casefold() for match in _EVIDENCE_TERM.finditer(text))
+
+
+def _evidence_spans(text: str, query_terms: tuple[str, ...]) -> tuple[tuple[int, int, int], ...]:
+    if not query_terms or not text.strip():
+        return ()
+    query = set(query_terms)
+    spans: list[tuple[int, int, int]] = []
+    for match in re.finditer(r"[^.!?\n]+[.!?]?", text):
+        raw = match.group(0).strip()
+        if not raw:
+            continue
+        start = match.start() + match.group(0).find(raw)
+        end = start + len(raw)
+        found = set(_evidence_terms(raw)) & query
+        if found:
+            spans.append((start, end, len(found) * 10 + sum(raw.casefold().count(term) for term in found)))
+    if spans:
+        return tuple(spans)
+    folded = text.casefold()
+    for term in query_terms:
+        index = folded.find(term)
+        if index < 0:
+            continue
+        start = max(0, index - 80)
+        end = min(len(text), index + len(term) + 80)
+        spans.append((start, end, 1))
+    return tuple(spans)
+
+
+def _render_evidence(fragments: Sequence[SelectedMemoryFragment]) -> str:
+    envelope = {
+        "trust": "untrusted_history",
+        "items": [
+            {
+                "citation": {
+                    "scope_id": fragment.address.memory.scope_id,
+                    "memory_ref": fragment.address.memory.artifact.model_dump(mode="json"),
+                    "entry_id": fragment.address.entry_id,
+                    "entry_version_id": fragment.address.entry_version_id,
+                },
+                "content": fragment.text,
+                "start": fragment.start,
+                "end": fragment.end,
+            }
+            for fragment in fragments
+        ],
+    }
+    encoded = json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+    return "\n\n".join((TRUST_POLICY, f"{_BEGIN_MARKER}\n{encoded}\n{_END_MARKER}"))
 
 
 def _render(entries: Sequence[_PreparedContextEntry]) -> str:
