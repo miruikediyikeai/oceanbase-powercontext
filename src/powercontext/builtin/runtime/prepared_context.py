@@ -17,7 +17,9 @@
 from __future__ import annotations
 
 import json
+import math
 import re
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from itertools import chain
@@ -317,8 +319,7 @@ class PreparedContextBuilder:
 
         if sum(len(candidates.hits) for candidates in memory_candidates) > self.memory_candidate_limit:
             raise PreparedContextInvariantError("memory-candidate-limit")
-        query_terms = _evidence_terms(request.query)
-        candidates: list[tuple[int, int, SelectedMemoryFragment]] = []
+        sentences: list[_EvidenceSentence] = []
         for group in memory_candidates:
             if not group.scope_id or group.memory_ref is None:
                 continue
@@ -335,24 +336,11 @@ class PreparedContextBuilder:
                     entry_id=hit.entry_id,
                     entry_version_id=hit.entry_version_id,
                 )
-                for start, end, score in _evidence_spans(hit.text, query_terms):
-                    fragment = SelectedMemoryFragment(
-                        address=address, start=start, end=end, text=hit.text[start:end]
-                    )
-                    candidates.append((score, start, fragment))
-        candidates.sort(key=lambda item: (-item[0], item[1], item[2].address.entry_id))
-        chosen: list[SelectedMemoryFragment] = []
-        covered: dict[tuple[str, str], list[tuple[int, int]]] = {}
-        for _score, _start, fragment in candidates:
-            key = (fragment.address.entry_id, fragment.address.entry_version_id)
-            ranges = covered.setdefault(key, [])
-            if any(not (fragment.end <= left or fragment.start >= right) for left, right in ranges):
-                continue
-            trial = [*chosen, fragment]
-            if len(_render_evidence(trial).encode("utf-8")) > request.max_bytes:
-                continue
-            chosen.append(fragment)
-            ranges.append((fragment.start, fragment.end))
+                sentences.extend(
+                    _EvidenceSentence(address=address, source=hit.text, start=start, end=end)
+                    for start, end in _sentence_spans(hit.text)
+                )
+        chosen = _pack_evidence(request.query, sentences, request.max_bytes)
         if not chosen:
             return PreparedContextBuild(context=self.empty(), origins=(), fragments=())
         content = _render_evidence(chosen)
@@ -753,38 +741,361 @@ def _interleave_groups(groups: Sequence[Sequence[_Item]]) -> tuple[_Item, ...]:
     return tuple(ordered)
 
 
-_EVIDENCE_TERM = re.compile(r"[A-Za-z]+|\d+|[\u4e00-\u9fff]+")
+_EVIDENCE_TERM = re.compile(r"[a-z]+|\d+|[\u4e00-\u9fff]+")
+_EVIDENCE_ABBREVIATIONS = frozenset({
+    "al",
+    "approx",
+    "ca",
+    "cf",
+    "dept",
+    "dr",
+    "eq",
+    "etc",
+    "fig",
+    "ie",
+    "jr",
+    "mr",
+    "mrs",
+    "ms",
+    "mt",
+    "no",
+    "pp",
+    "prof",
+    "sr",
+    "st",
+    "vol",
+    "vs",
+})
+_EVIDENCE_STOPWORDS = frozenset({
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "being",
+    "but",
+    "by",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "these",
+    "this",
+    "those",
+    "to",
+    "was",
+    "were",
+    "which",
+    "with",
+})
+_EVIDENCE_PACK_LIMIT = 12
+
+
+@dataclass(frozen=True)
+class _EvidenceSentence:
+    address: MemoryEntryAddress
+    source: str
+    start: int
+    end: int
+
+    @property
+    def text(self) -> str:
+        return self.source[self.start : self.end]
+
+    def fragment(self) -> SelectedMemoryFragment:
+        return SelectedMemoryFragment(address=self.address, start=self.start, end=self.end, text=self.text)
 
 
 def _evidence_terms(text: str) -> tuple[str, ...]:
-    return tuple(match.group(0).casefold() for match in _EVIDENCE_TERM.finditer(text))
+    terms = tuple(match.group(0) for match in _EVIDENCE_TERM.finditer(text.casefold()))
+    content = tuple(term for term in terms if term not in _EVIDENCE_STOPWORDS and (len(term) > 1 or term.isdigit()))
+    return content or terms
 
 
-def _evidence_spans(text: str, query_terms: tuple[str, ...]) -> tuple[tuple[int, int, int], ...]:
-    if not query_terms or not text.strip():
-        return ()
-    query = set(query_terms)
-    spans: list[tuple[int, int, int]] = []
-    for match in re.finditer(r"[^.!?\n]+[.!?]?", text):
-        raw = match.group(0).strip()
-        if not raw:
+def _sentence_spans(text: str) -> tuple[tuple[int, int], ...]:
+    spans: list[tuple[int, int]] = []
+    start = 0
+    length = len(text)
+    index = 0
+    while index < length:
+        if text[index] in ".!?" and _sentence_boundary(text, index):
+            end = index + 1
+            while end < length and text[end] in "\"'”’)":
+                end += 1
+            _append_sentence(spans, text, start, end)
+            index = end
+            while index < length and text[index].isspace():
+                index += 1
+            start = index
             continue
-        start = match.start() + match.group(0).find(raw)
-        end = start + len(raw)
-        found = set(_evidence_terms(raw)) & query
-        if found:
-            spans.append((start, end, len(found) * 10 + sum(raw.casefold().count(term) for term in found)))
-    if spans:
-        return tuple(spans)
-    folded = text.casefold()
-    for term in query_terms:
-        index = folded.find(term)
-        if index < 0:
+        if text[index] == "\n" and index + 1 < length and text[index + 1] == "\n":
+            _append_sentence(spans, text, start, index)
+            index += 2
+            while index < length and text[index].isspace():
+                index += 1
+            start = index
             continue
-        start = max(0, index - 80)
-        end = min(len(text), index + len(term) + 80)
-        spans.append((start, end, 1))
+        index += 1
+    _append_sentence(spans, text, start, length)
     return tuple(spans)
+
+
+def _append_sentence(spans: list[tuple[int, int]], text: str, start: int, end: int) -> None:
+    while start < end and text[start].isspace():
+        start += 1
+    while end > start and text[end - 1].isspace():
+        end -= 1
+    if start < end:
+        spans.append((start, end))
+
+
+def _starts_sentence(character: str) -> bool:
+    return (
+        character.isupper()
+        or character.isdigit()
+        or "\u4e00" <= character <= "\u9fff"
+        or character in "\"“("
+    )
+
+
+def _sentence_boundary(text: str, index: int) -> bool:
+    cursor = index + 1
+    while cursor < len(text) and text[cursor] in "\"'”’)":
+        cursor += 1
+    if cursor < len(text) and not text[cursor].isspace():
+        return False
+    nxt = cursor
+    while nxt < len(text) and text[nxt].isspace():
+        nxt += 1
+    if nxt < len(text) and not _starts_sentence(text[nxt]):
+        return False
+    if text[index] != ".":
+        return True
+    prev = index - 1
+    while prev >= 0 and text[prev].isspace():
+        prev -= 1
+    token_end = prev + 1
+    while prev >= 0 and text[prev].isalpha():
+        prev -= 1
+    token = text[prev + 1 : token_end].casefold()
+    if not token:
+        return True
+    return len(token) > 1 and token not in _EVIDENCE_ABBREVIATIONS
+
+
+def _pack_evidence(
+    query: str,
+    sentences: Sequence[_EvidenceSentence],
+    max_bytes: int,
+) -> tuple[SelectedMemoryFragment, ...]:
+    query_terms = _evidence_terms(query)
+    if not query_terms or not sentences:
+        return ()
+    scores = _bm25_scores(query_terms, sentences)
+    paired = [
+        (sentence, score)
+        for sentence, score in zip(sentences, scores, strict=True)
+        if score > 0
+    ]
+    paired.sort(key=lambda item: (-item[1], item[0].address.entry_id, item[0].start))
+    ranked = [sentence for sentence, _score in paired[:_EVIDENCE_PACK_LIMIT]]
+    if not ranked:
+        return ()
+    score_of = {id(sentence): score for sentence, score in paired[:_EVIDENCE_PACK_LIMIT]}
+    chosen = _knapsack_evidence(ranked, score_of, max_bytes)
+    chosen = _merge_evidence(chosen)
+    chosen = _fill_evidence(chosen, ranked, max_bytes)
+    chosen = _expand_evidence(chosen, sentences, max_bytes)
+    return tuple(sentence.fragment() for sentence in chosen)
+
+
+def _bm25_scores(query_terms: Sequence[str], sentences: Sequence[_EvidenceSentence]) -> tuple[float, ...]:
+    documents = [list(_evidence_terms(sentence.text)) for sentence in sentences]
+    count = len(documents)
+    frequencies = [Counter(document) for document in documents]
+    document_frequency: Counter[str] = Counter()
+    for document in documents:
+        document_frequency.update(set(document))
+    average = sum(len(document) for document in documents) / count or 1.0
+    query_bigrams = set(zip(query_terms, query_terms[1:], strict=False))
+    scored: list[float] = []
+    for document, frequency in zip(documents, frequencies, strict=True):
+        score = 0.0
+        for term in dict.fromkeys(query_terms):
+            seen = frequency[term]
+            if seen == 0:
+                continue
+            rarity = document_frequency[term]
+            inverse = math.log(1.0 + (count - rarity + 0.5) / (rarity + 0.5))
+            normalizer = seen + 1.2 * (0.25 + 0.75 * len(document) / average)
+            score += inverse * (seen * 2.2) / normalizer
+        bigrams = set(zip(document, document[1:], strict=False))
+        score += 1.5 * len(query_bigrams & bigrams)
+        scored.append(score)
+    return tuple(scored)
+
+
+def _knapsack_evidence(
+    ranked: Sequence[_EvidenceSentence],
+    score_of: dict[int, float],
+    max_bytes: int,
+) -> list[_EvidenceSentence]:
+    costs = [_fragment_cost(sentence.fragment()) for sentence in ranked]
+    limit = max_bytes - _evidence_base_bytes() + 1
+    best_mask = 0
+    best_score = 0.0
+    total = len(ranked)
+    for mask in range(1, 1 << total):
+        score = 0.0
+        cost = 0
+        for index in range(total):
+            if mask >> index & 1:
+                score += score_of[id(ranked[index])]
+                cost += costs[index]
+        if cost <= limit and score > best_score:
+            best_score = score
+            best_mask = mask
+    chosen = [ranked[index] for index in range(total) if best_mask >> index & 1]
+    while chosen and not _evidence_fits(chosen, max_bytes):
+        chosen.remove(min(chosen, key=lambda sentence: (score_of[id(sentence)], -sentence.start)))
+    return chosen
+
+
+def _merge_evidence(chosen: Sequence[_EvidenceSentence]) -> list[_EvidenceSentence]:
+    grouped: dict[tuple[str, str], list[_EvidenceSentence]] = {}
+    for sentence in chosen:
+        grouped.setdefault(_evidence_key(sentence), []).append(sentence)
+    merged: list[_EvidenceSentence] = []
+    for spans in grouped.values():
+        spans.sort(key=lambda sentence: sentence.start)
+        current = spans[0]
+        for sentence in spans[1:]:
+            gap = sentence.source[current.end : sentence.start]
+            if sentence.start <= current.end or not gap.strip():
+                current = _widen_evidence(current, min(current.start, sentence.start), max(current.end, sentence.end))
+            else:
+                merged.append(current)
+                current = sentence
+        merged.append(current)
+    merged.sort(key=lambda sentence: (sentence.address.entry_id, sentence.start))
+    return merged
+
+
+def _fill_evidence(
+    chosen: Sequence[_EvidenceSentence],
+    ranked: Sequence[_EvidenceSentence],
+    max_bytes: int,
+) -> list[_EvidenceSentence]:
+    selected = list(chosen)
+    for sentence in ranked:
+        if any(_evidence_overlaps(sentence, other) for other in selected):
+            continue
+        trial = [*selected, sentence]
+        if _evidence_fits(trial, max_bytes):
+            selected.append(sentence)
+    return selected
+
+
+def _expand_evidence(
+    chosen: Sequence[_EvidenceSentence],
+    sentences: Sequence[_EvidenceSentence],
+    max_bytes: int,
+) -> list[_EvidenceSentence]:
+    by_entry: dict[tuple[str, str], list[_EvidenceSentence]] = {}
+    for sentence in sentences:
+        by_entry.setdefault(_evidence_key(sentence), []).append(sentence)
+    for spans in by_entry.values():
+        spans.sort(key=lambda sentence: sentence.start)
+    selected = list(chosen)
+    progressed = True
+    while progressed:
+        progressed = False
+        for index, sentence in enumerate(selected):
+            spans = by_entry[_evidence_key(sentence)]
+            covered = [
+                span_index
+                for span_index, span in enumerate(spans)
+                if not (span.end <= sentence.start or span.start >= sentence.end)
+            ]
+            if not covered:
+                continue
+            for neighbor_index in (covered[0] - 1, covered[-1] + 1):
+                if not 0 <= neighbor_index < len(spans):
+                    continue
+                neighbor = spans[neighbor_index]
+                widened = _widen_evidence(
+                    sentence,
+                    min(sentence.start, neighbor.start),
+                    max(sentence.end, neighbor.end),
+                )
+                if any(
+                    other is not sentence and _evidence_overlaps(widened, other)
+                    for other in selected
+                ):
+                    continue
+                trial = list(selected)
+                trial[index] = widened
+                if _evidence_fits(trial, max_bytes):
+                    selected = trial
+                    progressed = True
+                    break
+            if progressed:
+                break
+    selected.sort(key=lambda sentence: (sentence.address.entry_id, sentence.start))
+    return selected
+
+
+def _evidence_key(sentence: _EvidenceSentence) -> tuple[str, str]:
+    return (sentence.address.entry_id, sentence.address.entry_version_id)
+
+
+def _widen_evidence(sentence: _EvidenceSentence, start: int, end: int) -> _EvidenceSentence:
+    return _EvidenceSentence(address=sentence.address, source=sentence.source, start=start, end=end)
+
+
+def _evidence_overlaps(left: _EvidenceSentence, right: _EvidenceSentence) -> bool:
+    return _evidence_key(left) == _evidence_key(right) and not (left.end <= right.start or left.start >= right.end)
+
+
+def _evidence_fits(sentences: Sequence[_EvidenceSentence], max_bytes: int) -> bool:
+    if not sentences:
+        return True
+    return len(_render_evidence(tuple(sentence.fragment() for sentence in sentences)).encode("utf-8")) <= max_bytes
+
+
+def _fragment_cost(fragment: SelectedMemoryFragment) -> int:
+    payload = {
+        "citation": {
+            "scope_id": fragment.address.memory.scope_id,
+            "memory_ref": fragment.address.memory.artifact.model_dump(mode="json"),
+            "entry_id": fragment.address.entry_id,
+            "entry_version_id": fragment.address.entry_version_id,
+        },
+        "content": fragment.text,
+        "start": fragment.start,
+        "end": fragment.end,
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return len(encoded) + 1
+
+
+def _evidence_base_bytes() -> int:
+    return len(_render_evidence(()).encode("utf-8"))
 
 
 def _render_evidence(fragments: Sequence[SelectedMemoryFragment]) -> str:
