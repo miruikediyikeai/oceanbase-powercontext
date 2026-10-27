@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from pyobvector import VECTOR, VectorIndex
 from sqlalchemy import (
     BigInteger,
@@ -403,9 +405,8 @@ class OceanBaseMemoryVectorIndex:
     ) -> MemorySearchChannels:
         """Read both candidate channels with one statement.
 
-        Each branch keeps the filter and candidate limit of the single-channel query.
-        The vector branch stays join-free so the approximate scan can use the vector
-        index; entry text is attached after that limit.
+        Each branch is the corresponding single-channel query, including its join,
+        filter, order, and candidate limit, so fusion sees the same rankings.
         """
 
         if request.embedding_profile != self.profile or request.query_vector is None:
@@ -416,18 +417,24 @@ class OceanBaseMemoryVectorIndex:
         tag_filter = request.tag_filter
         fts_tag = _hybrid_tag_clause("h", "fts") if tag_filter is not None else ""
         vector_tag = _hybrid_tag_clause("m", "vector") if tag_filter is not None else ""
-        vector_limit = (
+        # A tag predicate beside APPROXIMATE drops the vector index. The single-channel
+        # query makes the same choice: exact distance order once the tag filter is present.
+        vector_order = (
             "ORDER BY l2_distance(m.embedding, :query_vector) LIMIT :vector_limit"
             if tag_filter is not None
             else "ORDER BY l2_distance(m.embedding, :query_vector) APPROXIMATE LIMIT :vector_limit"
         )
         sql = f"""
-            SELECT 'fts' AS channel, f.memory_artifact_id, f.head_revision, f.entry_id,
-                   f.entry_version_id, v.text, CAST(NULL AS DOUBLE) AS distance, f.score
+            SELECT /*+ NO_MERGE(f) */ 'fts' AS channel, f.memory_artifact_id, f.head_revision, f.entry_id,
+                   f.entry_version_id, f.text, CAST(NULL AS DOUBLE) AS distance, f.score
             FROM (
                 SELECT h.memory_artifact_id, h.head_revision, h.entry_id, h.entry_version_id,
-                       MATCH (h.searchable_text) AGAINST (:analyzed_query) AS score
+                       v.text, MATCH (h.searchable_text) AGAINST (:analyzed_query) AS score
                 FROM pc_memory_entry_heads AS h
+                JOIN pc_memory_entry_versions AS v
+                  ON v.scope_id = h.scope_id
+                 AND v.memory_artifact_id = h.memory_artifact_id
+                 AND v.entry_version_id = h.entry_version_id
                 WHERE h.scope_id = :scope_id
                   AND h.memory_artifact_id IN :fts_memory_artifact_ids
                   AND MATCH (h.searchable_text) AGAINST (:analyzed_query)
@@ -435,26 +442,22 @@ class OceanBaseMemoryVectorIndex:
                 ORDER BY score DESC, h.memory_artifact_id, h.entry_id, h.entry_version_id
                 LIMIT :fts_limit
             ) AS f
-            JOIN pc_memory_entry_versions AS v
-              ON v.scope_id = :scope_id
-             AND v.memory_artifact_id = f.memory_artifact_id
-             AND v.entry_version_id = f.entry_version_id
             UNION ALL
-            SELECT 'vector' AS channel, n.memory_artifact_id, n.head_revision, n.entry_id,
-                   n.entry_version_id, v.text, n.distance, CAST(NULL AS DOUBLE) AS score
+            SELECT /*+ NO_MERGE(n) */ 'vector' AS channel, n.memory_artifact_id, n.head_revision,
+                   n.entry_id, n.entry_version_id, n.text, n.distance, CAST(NULL AS DOUBLE) AS score
             FROM (
                 SELECT m.memory_artifact_id, m.head_revision, m.entry_id, m.entry_version_id,
-                       l2_distance(m.embedding, :query_vector) AS distance
+                       v.text, l2_distance(m.embedding, :query_vector) AS distance
                 FROM pc_memory_vector_entries AS m
+                JOIN pc_memory_entry_versions AS v
+                  ON v.scope_id = m.scope_id
+                 AND v.memory_artifact_id = m.memory_artifact_id
+                 AND v.entry_version_id = m.entry_version_id
                 WHERE m.scope_id = :scope_id
                   AND m.memory_artifact_id IN :vector_memory_artifact_ids
                   {vector_tag}
-                {vector_limit}
+                {vector_order}
             ) AS n
-            JOIN pc_memory_entry_versions AS v
-              ON v.scope_id = :scope_id
-             AND v.memory_artifact_id = n.memory_artifact_id
-             AND v.entry_version_id = n.entry_version_id
             """
         binds = [
             bindparam("fts_memory_artifact_ids", expanding=True),
@@ -485,23 +488,15 @@ class OceanBaseMemoryVectorIndex:
                 for name in ("fts_tag_keys", "fts_tag_hashes", "vector_tag_keys", "vector_tag_hashes")
             )
         rows = (await connection.execute(text(sql).bindparams(*binds), parameters)).mappings().all()
-        fts_rows = sorted(
-            (row for row in rows if str(row["channel"]) == "fts"),
+        fts_rows = [row for row in rows if _hybrid_channel(row) == "fts"]
+        vector_rows = [row for row in rows if _hybrid_channel(row) == "vector"]
+        fts_rows.sort(
             key=lambda row: (
                 -float(row["score"]),
                 str(row["memory_artifact_id"]),
                 str(row["entry_id"]),
                 str(row["entry_version_id"]),
-            ),
-        )
-        vector_rows = sorted(
-            (row for row in rows if str(row["channel"]) == "vector"),
-            key=lambda row: (
-                float(row["distance"]),
-                str(row["memory_artifact_id"]),
-                str(row["entry_id"]),
-                str(row["entry_version_id"]),
-            ),
+            )
         )
         return MemorySearchChannels(
             fts=memory_channel_hits(fts_rows, request.memories),
@@ -607,6 +602,13 @@ class OceanBaseMemoryVectorIndex:
                 )
             )
         return tuple(hydrated)
+
+
+def _hybrid_channel(row: Mapping[str, object]) -> str:
+    value = row["channel"]
+    if isinstance(value, bytes):
+        value = value.decode()
+    return str(value).strip().lower()
 
 
 def _hybrid_tag_clause(alias: str, prefix: str) -> str:
