@@ -18,7 +18,10 @@ from __future__ import annotations
 
 import hashlib
 import io
+import math
 import re
+from collections import Counter
+from dataclasses import dataclass
 from urllib.parse import quote
 
 from pydantic import BaseModel
@@ -26,47 +29,113 @@ from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
 from powercontext.builtin.artifacts.memory.models import MemoryCitation
+from powercontext.builtin.artifacts.search import analyze_fts_query, analyze_text
 from powercontext.builtin.runtime import GetMemoryEntryRequest, SearchMemoryRequest
 from powercontext.limits import MAX_SOURCE_ID_LENGTH
 from powercontext.sources import TEXT_EVIDENCE_PROJECTION_KEY, AdapterSourceDefinition, TextEvidence
 from powercontext.sources.models import Source, SourceMaterialization
 
 PDF_PAGE_SOURCE_NAME = "pdf-page"
-_QUERY_STOPWORDS = frozenset(
-    {
-        "a",
-        "an",
-        "and",
-        "are",
-        "as",
-        "at",
-        "be",
-        "by",
-        "for",
-        "from",
-        "fy",
-        "has",
-        "if",
-        "in",
-        "into",
-        "is",
-        "it",
-        "of",
-        "on",
-        "or",
-        "that",
-        "the",
-        "their",
-        "then",
-        "to",
-        "was",
-        "were",
-        "what",
-        "which",
-        "who",
-        "with",
-    }
+_QUERY_STOPWORDS = frozenset({
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "fy",
+    "has",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "then",
+    "to",
+    "was",
+    "were",
+    "what",
+    "which",
+    "who",
+    "with",
+})
+_QUERY_NOISE = frozenset(
+    analyze_text(
+        "what which who how when where does did has have had any the a an and or of to for from in on by with "
+        "is are was were be been being this that these those it its their our not no if then else state answer "
+        "respond question calculate define using give only use shown within assuming perspective investment "
+        "analyst details report reported directly explicitly outlined quantity less unadjusted fy"
+    ).split()
 )
+_GEOGRAPHY_QUESTION = re.compile(r"geograph|countries|regions|primarily operates")
+_NUMERIC_QUESTION = re.compile(
+    r"margin|income|revenue|expense|cost|ebitda|capex|cash flow|earnings|profit|tax|debt|dividend|amount|"
+    r"quantity|million|balance sheet|impairment"
+)
+_REGION_NAMES = (
+    "north america",
+    "latin america",
+    "europe",
+    "asia pacific",
+    "middle east",
+    "africa",
+    "united states",
+    "canada",
+)
+# Analyst wording rarely appears on the statement or note page that actually answers it.
+_EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
+    (_GEOGRAPHY_QUESTION, ("reportable segments", "organized into", "geographic")),
+    (re.compile(r"legal|litigation|lawsuit|battles"), ("legal proceedings",)),
+    (re.compile(r"income statement|p&l|p l statement|profit and loss"), ("statement of income", "operating profit")),
+    (re.compile(r"cash flow"), ("statement of cash flows", "depreciation and amortization")),
+    (re.compile(r"capex|capital expenditure"), ("purchases of property", "capital expenditure", "capital spending")),
+    (
+        re.compile(r"ebitda|depreciation|amortization"),
+        ("depreciation and amortization", "operating profit", "operating income"),
+    ),
+    (re.compile(r"restructur"), ("restructuring and impairment", "restructuring charges")),
+    (re.compile(r"dividend"), ("dividends paid", "cash dividends")),
+    (re.compile(r"repurchase|buyback"), ("share repurchase", "treasury stock")),
+    (re.compile(r"effective tax|tax rate"), ("effective tax", "income taxes")),
+    (re.compile(r"goodwill"), ("goodwill",)),
+    (re.compile(r"gross margin|gross profit"), ("gross profit", "cost of sales")),
+    (re.compile(r"\brevenue\b|net sales"), ("net revenue", "net sales")),
+    (re.compile(r"interest expense|long-term debt"), ("interest expense", "long-term debt")),
+    (re.compile(r"inventor"), ("inventories",)),
+    (re.compile(r"receivable"), ("accounts receivable", "receivables")),
+    (re.compile(r"\blease"), ("operating lease",)),
+    (re.compile(r"pension"), ("pension", "retiree medical")),
+    (re.compile(r"employee|workforce|headcount"), ("number of employees", "employees")),
+    (re.compile(r"working capital"), ("working capital",)),
+    (re.compile(r"free cash"), ("free cash flow",)),
+    (re.compile(r"earnings per share|\beps\b"), ("earnings per share",)),
+    (re.compile(r"selling general|\bsg&a\b|\bsga\b"), ("selling general and administrative",)),
+    (re.compile(r"research and development"), ("research and development",)),
+    (re.compile(r"contingenc"), ("commitments and contingencies",)),
+    (re.compile(r"subsequent event"), ("subsequent events",)),
+    (re.compile(r"share-based|stock-based|share based|stock based"), ("share-based compensation",)),
+    (re.compile(r"balance sheet|financial position"), ("total assets", "financial position")),
+    (re.compile(r"comprehensive income"), ("comprehensive income",)),
+    (re.compile(r"stockholders|shareholders. equity"), ("stockholders equity", "shareholders equity")),
+    (re.compile(r"auditor|independent registered"), ("independent registered public accounting",)),
+    (re.compile(r"risk factor"), ("risk factors",)),
+    (re.compile(r"impairment"), ("impairment",)),
+    (re.compile(r"acquisition|divestiture"), ("acquisition", "divestiture")),
+)
+_PHRASE_BONUS = 8.0
+_NEIGHBOR_BONUS = 6.0
+_PRECISE_PHRASE_LIMIT = 6
+_AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 
 
 class PDFDocumentInput(BaseModel):
@@ -185,6 +254,9 @@ async def search_pdf_pages(memory, question: str, limit: int = 10) -> tuple[Memo
 
     if limit < 1 or not isinstance(question, str) or question.strip() == "":
         return ()
+    listed = await _listed_pages(memory)
+    if listed:
+        return _rank_pages(listed, question, limit)
     ranked: dict[str, tuple[int, int, MemoryCitation]] = {}
     terms = _question_terms(question)
     order = 0
@@ -252,3 +324,154 @@ def _overlap_score(text: str, terms: tuple[str, ...]) -> int:
             continue
         score += 4 if term.isdigit() or len(term) >= 7 else 1
     return score
+
+
+@dataclass
+class _CorpusPage:
+    source_id: str
+    citation: MemoryCitation
+    text: str
+    page_number: int
+    document_key: str
+
+
+async def _listed_pages(memory) -> tuple[_CorpusPage, ...]:
+    list_entries = getattr(memory, "list", None)
+    if list_entries is None:
+        return ()
+    listed = await list_entries()
+    grouped: dict[str, _CorpusPage] = {}
+    for record in listed.entries:
+        entry = record.entry
+        if not entry.sources or not entry.text.strip():
+            continue
+        source_id = entry.sources[0].source_id
+        current = grouped.get(source_id)
+        if current is None:
+            grouped[source_id] = _CorpusPage(
+                source_id=source_id,
+                citation=record.citation,
+                text=entry.text,
+                page_number=_trailing_page_number(source_id),
+                document_key=source_id.rsplit(":", 1)[0],
+            )
+        else:
+            current.text = f"{current.text}\n{entry.text}"
+    return tuple(grouped.values())
+
+
+def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tuple[MemoryCitation, ...]:
+    folded_question = question.casefold()
+    phrases = _expansion_phrases(folded_question)
+    query_counts = Counter(_stem(term) for term in analyze_fts_query(question).split() if term not in _QUERY_NOISE)
+    token_rows = [Counter(_stem(term) for term in analyze_text(page.text).split()) for page in pages]
+    lengths = [sum(counts.values()) for counts in token_rows]
+    document_frequency: Counter[str] = Counter()
+    for counts in token_rows:
+        document_frequency.update(counts)
+    total = len(pages)
+    average = (sum(lengths) / total) if total else 1.0
+    numeric = _NUMERIC_QUESTION.search(folded_question) is not None
+    geography = _GEOGRAPHY_QUESTION.search(folded_question) is not None
+    folded_pages = [page.text.casefold() for page in pages]
+    scores = {
+        page.source_id: _lexical_score(
+            counts,
+            length,
+            folded,
+            query_counts=query_counts,
+            document_frequency=document_frequency,
+            total=total,
+            average=average,
+            phrases=phrases,
+            numeric=numeric,
+            geography=geography,
+        )
+        for page, counts, length, folded in zip(pages, token_rows, lengths, folded_pages, strict=True)
+    }
+    _add_neighbor_bonus(pages, folded_pages, phrases, scores)
+    ordered = sorted(pages, key=lambda page: (-scores[page.source_id], page.page_number, page.source_id))
+    return tuple(page.citation for page in ordered[:limit])
+
+
+def _lexical_score(
+    counts: Counter[str],
+    length: int,
+    folded: str,
+    *,
+    query_counts: Counter[str],
+    document_frequency: Counter[str],
+    total: int,
+    average: float,
+    phrases: tuple[str, ...],
+    numeric: bool,
+    geography: bool,
+) -> float:
+    score = 0.0
+    norm = 0.25 + 0.75 * (length / average if average else 1.0)
+    for term, query_frequency in query_counts.items():
+        frequency = counts.get(term, 0)
+        if not frequency:
+            continue
+        seen = document_frequency[term]
+        idf = math.log((total - seen + 0.5) / (seen + 0.5) + 1.0)
+        score += idf * (frequency * 2.2) / (frequency + 1.2 * norm) * (1.0 + math.log(query_frequency))
+    for phrase in phrases:
+        if phrase in folded:
+            score += _PHRASE_BONUS
+    if numeric:
+        amounts = len(_AMOUNT_PATTERN.findall(folded))
+        if amounts >= 8:
+            score += min(amounts, 36) / 4.0
+    if geography:
+        region_hits = sum(region in folded for region in _REGION_NAMES)
+        if region_hits >= 3:
+            score += 4.0 + region_hits
+    return score
+
+
+def _add_neighbor_bonus(
+    pages: tuple[_CorpusPage, ...],
+    folded_pages: list[str],
+    phrases: tuple[str, ...],
+    scores: dict[str, float],
+) -> None:
+    location = {(page.document_key, page.page_number): page.source_id for page in pages if page.page_number > 0}
+    precise: set[tuple[str, int]] = set()
+    for phrase in phrases:
+        matched = [
+            (page.document_key, page.page_number)
+            for page, folded in zip(pages, folded_pages, strict=True)
+            if page.page_number > 0 and phrase in folded
+        ]
+        if 0 < len(matched) <= _PRECISE_PHRASE_LIMIT:
+            precise.update(matched)
+    for document_key, number in precise:
+        for neighbor in (number - 1, number + 1):
+            source_id = location.get((document_key, neighbor))
+            if source_id is not None:
+                scores[source_id] += _NEIGHBOR_BONUS
+
+
+def _expansion_phrases(folded_question: str) -> tuple[str, ...]:
+    phrases: list[str] = []
+    for pattern, candidates in _EXPANSIONS:
+        if pattern.search(folded_question) is None:
+            continue
+        for phrase in candidates:
+            if phrase not in phrases:
+                phrases.append(phrase)
+    return tuple(phrases)
+
+
+def _stem(token: str) -> str:
+    if token.isdigit() or len(token) < 6:
+        return token
+    return token[:6]
+
+
+def _trailing_page_number(source_id: str) -> int:
+    tail = source_id.rsplit(":", 1)[-1]
+    if tail.isdecimal():
+        return int(tail)
+    return 0
