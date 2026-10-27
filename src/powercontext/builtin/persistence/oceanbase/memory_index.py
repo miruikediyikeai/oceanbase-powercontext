@@ -394,6 +394,120 @@ class OceanBaseMemoryVectorIndex:
         ).mappings()
         return MemorySearchChannels(vector=memory_channel_hits(rows, request.memories))
 
+    async def search_hybrid(
+        self,
+        connection: AsyncConnection,
+        scope_id: str,
+        request: MemorySearchRequest,
+        /,
+    ) -> MemorySearchChannels:
+        """Read both candidate channels with one statement.
+
+        Each branch keeps the filter and candidate limit of the single-channel query.
+        The vector branch stays join-free so the approximate scan can use the vector
+        index; entry text is attached after that limit.
+        """
+
+        if request.embedding_profile != self.profile or request.query_vector is None:
+            raise CapabilityNotSupportedError("embedding-profile")
+        if not await self.vector_complete(connection, scope_id, request.memories, self.profile):
+            raise CapabilityNotSupportedError("vector")
+        artifact_ids = tuple(memory.artifact_id for memory in request.memories)
+        tag_filter = request.tag_filter
+        fts_tag = _hybrid_tag_clause("h", "fts") if tag_filter is not None else ""
+        vector_tag = _hybrid_tag_clause("m", "vector") if tag_filter is not None else ""
+        vector_limit = (
+            "ORDER BY l2_distance(m.embedding, :query_vector) LIMIT :vector_limit"
+            if tag_filter is not None
+            else "ORDER BY l2_distance(m.embedding, :query_vector) APPROXIMATE LIMIT :vector_limit"
+        )
+        sql = f"""
+            SELECT 'fts' AS channel, f.memory_artifact_id, f.head_revision, f.entry_id,
+                   f.entry_version_id, v.text, CAST(NULL AS DOUBLE) AS distance, f.score
+            FROM (
+                SELECT h.memory_artifact_id, h.head_revision, h.entry_id, h.entry_version_id,
+                       MATCH (h.searchable_text) AGAINST (:analyzed_query) AS score
+                FROM pc_memory_entry_heads AS h
+                WHERE h.scope_id = :scope_id
+                  AND h.memory_artifact_id IN :fts_memory_artifact_ids
+                  AND MATCH (h.searchable_text) AGAINST (:analyzed_query)
+                  {fts_tag}
+                ORDER BY score DESC, h.memory_artifact_id, h.entry_id, h.entry_version_id
+                LIMIT :fts_limit
+            ) AS f
+            JOIN pc_memory_entry_versions AS v
+              ON v.scope_id = :scope_id
+             AND v.memory_artifact_id = f.memory_artifact_id
+             AND v.entry_version_id = f.entry_version_id
+            UNION ALL
+            SELECT 'vector' AS channel, n.memory_artifact_id, n.head_revision, n.entry_id,
+                   n.entry_version_id, v.text, n.distance, CAST(NULL AS DOUBLE) AS score
+            FROM (
+                SELECT m.memory_artifact_id, m.head_revision, m.entry_id, m.entry_version_id,
+                       l2_distance(m.embedding, :query_vector) AS distance
+                FROM pc_memory_vector_entries AS m
+                WHERE m.scope_id = :scope_id
+                  AND m.memory_artifact_id IN :vector_memory_artifact_ids
+                  {vector_tag}
+                {vector_limit}
+            ) AS n
+            JOIN pc_memory_entry_versions AS v
+              ON v.scope_id = :scope_id
+             AND v.memory_artifact_id = n.memory_artifact_id
+             AND v.entry_version_id = n.entry_version_id
+            """
+        binds = [
+            bindparam("fts_memory_artifact_ids", expanding=True),
+            bindparam("vector_memory_artifact_ids", expanding=True),
+            bindparam("query_vector", type_=VECTOR(self.profile.dimension)),
+        ]
+        parameters: dict[str, object] = {
+            "scope_id": scope_id,
+            "analyzed_query": request.analyzed_query,
+            "fts_memory_artifact_ids": artifact_ids,
+            "vector_memory_artifact_ids": artifact_ids,
+            "fts_limit": request.candidate_limit,
+            "vector_limit": request.candidate_limit,
+            "query_vector": validate_embedding(request.query_vector, dimension=self.profile.dimension),
+        }
+        if tag_filter is not None:
+            tags = memory_tag_parameters(tag_filter)
+            parameters.update({
+                "fts_tag_keys": tags["tag_keys"],
+                "fts_tag_hashes": tags["tag_hashes"],
+                "fts_tag_minimum": tags["tag_minimum"],
+                "vector_tag_keys": tags["tag_keys"],
+                "vector_tag_hashes": tags["tag_hashes"],
+                "vector_tag_minimum": tags["tag_minimum"],
+            })
+            binds.extend(
+                bindparam(name, expanding=True)
+                for name in ("fts_tag_keys", "fts_tag_hashes", "vector_tag_keys", "vector_tag_hashes")
+            )
+        rows = (await connection.execute(text(sql).bindparams(*binds), parameters)).mappings().all()
+        fts_rows = sorted(
+            (row for row in rows if str(row["channel"]) == "fts"),
+            key=lambda row: (
+                -float(row["score"]),
+                str(row["memory_artifact_id"]),
+                str(row["entry_id"]),
+                str(row["entry_version_id"]),
+            ),
+        )
+        vector_rows = sorted(
+            (row for row in rows if str(row["channel"]) == "vector"),
+            key=lambda row: (
+                float(row["distance"]),
+                str(row["memory_artifact_id"]),
+                str(row["entry_id"]),
+                str(row["entry_version_id"]),
+            ),
+        )
+        return MemorySearchChannels(
+            fts=memory_channel_hits(fts_rows, request.memories),
+            vector=memory_channel_hits(vector_rows, request.memories),
+        )
+
     async def vector_complete(
         self,
         connection: AsyncConnection,
@@ -493,6 +607,21 @@ class OceanBaseMemoryVectorIndex:
                 )
             )
         return tuple(hydrated)
+
+
+def _hybrid_tag_clause(alias: str, prefix: str) -> str:
+    """Same entry-tag predicate as the single-channel SQL, with distinct binds."""
+
+    return f"""
+      AND (SELECT COUNT(*) FROM pc_artifact_tags AS tags
+           WHERE tags.scope_id = {alias}.scope_id
+             AND tags.family = 'memory'
+             AND tags.artifact_id = {alias}.memory_artifact_id
+             AND tags.target_type = 'memory_entry'
+             AND tags.target_id = {alias}.entry_id
+             AND tags.tag_key_hash IN :{prefix}_tag_hashes
+             AND tags.tag_key IN :{prefix}_tag_keys) >= :{prefix}_tag_minimum
+    """
 
 
 def _embedding_hash(profile: EmbeddingProfile, entry_hash: str) -> str:
