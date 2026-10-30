@@ -29,3 +29,36 @@ content under the same identity as if it were a new observation.
 - Application or evaluation events: use the application's adapter; [Bub capture](../integrations/evaluation.md) is opt-in.
 
 Source writes and reads are subject to the selected [Scope and access policy](scopes-and-access.md).
+
+## Capture PDF pages
+
+`powercontext.sources.pdf_pages` provides `PDFDocumentInput`, `parse_pdf_document`,
+`PDF_PAGE_SOURCE_DEFINITION`, and `search_pdf_pages`. Install the built-in Runtime dependencies and
+`pypdf` to use this module; the competition environment pins `pypdf==6.19.0`.
+
+Pass the complete original PDF bytes and a nonblank document ID to the parser. It returns every physical
+page in order, starting at 1, including blank pages. Each page carries the SHA-256 of the complete PDF.
+PDFs readable with an empty password are accepted; invalid, truncated, or password-protected documents
+raise `ValueError` without returning partial pages. Text extraction preserves page boundaries and does
+not perform OCR.
+
+Resolve each returned page with a `SourceDefinitionRegistry` containing `PDF_PAGE_SOURCE_DEFINITION`,
+then submit its `project_source_for_transport` observation through Runtime ingestion. Register
+`manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION)` before submitting observations. The `pdf-page`
+Definition is version `1`; its captured Source reads back the exact `PDFPageInput`. Its standard text
+projection contains `document_id + "\n" + page.text`, with metadata containing exactly `document_id`,
+`document_sha256`, and `page_number`. Long document IDs use a digest in the Source identity while
+retaining the original ID in the captured page and metadata. Existing short Source identities retain
+their spelling.
+
+Use a pipeline that writes each page projection as a separate Memory entry with that Source reference.
+After processing, call `await search_pdf_pages(runtime.memory.for_scope(scope_id), question, limit=20)`.
+The result is a tuple of exact `MemoryCitation` values for distinct pages, which can be read through
+`memory.get(GetMemoryEntryRequest(citation=citation))`, including after reopening Runtime. Nonpositive
+limits and blank questions return an empty tuple. Other Source types are excluded.
+
+Retrieval uses only the scoped public Memory API, with local lexical scoring and financial vocabulary
+expansion. Each query reads the current scope's PDF entries and scores their complete texts; work and
+temporary storage grow with the scoped corpus size. It does not require a model or network connection.
+Keep original PDFs indexed by their full digest so the returned physical page can be checked. A changed
+PDF receives a new identity; retain its previous bytes to keep earlier citations useful.

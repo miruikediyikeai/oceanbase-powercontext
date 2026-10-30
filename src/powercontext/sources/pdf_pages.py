@@ -22,11 +22,12 @@ import math
 import re
 from collections import Counter
 from dataclasses import dataclass
+from itertools import pairwise
 from urllib.parse import quote
 
-from pydantic import BaseModel
-from pypdf import PdfReader
-from pypdf.errors import PdfReadError
+from pydantic import BaseModel, Field, field_validator
+from pypdf import PageObject, PdfReader
+from pypdf.generic import ArrayObject, NullObject, StreamObject
 
 from powercontext.builtin.artifacts.memory.models import MemoryCitation
 from powercontext.builtin.artifacts.search import analyze_fts_query, analyze_text
@@ -96,8 +97,14 @@ _REGION_NAMES = (
 _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (_GEOGRAPHY_QUESTION, ("reportable segments", "organized into", "geographic")),
     (re.compile(r"legal|litigation|lawsuit|battles"), ("legal proceedings",)),
-    (re.compile(r"income statement|p&l|p l statement|profit and loss"), ("statement of income", "operating profit")),
-    (re.compile(r"cash flow"), ("statement of cash flows", "depreciation and amortization")),
+    (
+        re.compile(r"income statement|p&l|p l statement|profit and loss"),
+        ("statement of income", "statements of income", "statements of operations", "operating profit"),
+    ),
+    (
+        re.compile(r"cash flow"),
+        ("statement of cash flows", "statements of cash flows", "depreciation and amortization"),
+    ),
     (re.compile(r"capex|capital expenditure"), ("purchases of property", "capital expenditure", "capital spending")),
     (
         re.compile(r"ebitda|depreciation|amortization"),
@@ -144,14 +151,28 @@ class PDFDocumentInput(BaseModel):
     document_id: str
     content: bytes
 
+    @field_validator("document_id")
+    @classmethod
+    def validate_document_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("document_id must not be blank")  # noqa: TRY003
+        return value
+
 
 class PDFPageInput(BaseModel):
     """Extracted text for one physical page. Page numbers start at 1."""
 
     document_id: str
-    document_sha256: str
-    page_number: int
+    document_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    page_number: int = Field(ge=1)
     text: str
+
+    @field_validator("document_id")
+    @classmethod
+    def validate_document_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("document_id must not be blank")  # noqa: TRY003
+        return value
 
 
 class PDFPageSource(Source):
@@ -173,13 +194,13 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
         raise ValueError("document is not a PDF")  # noqa: TRY003
     document_sha256 = hashlib.sha256(value.content).hexdigest()
     try:
-        reader = PdfReader(io.BytesIO(value.content))
+        reader = PdfReader(io.BytesIO(value.content), strict=True)
         if reader.is_encrypted and reader.decrypt("") == 0:
-            raise ValueError("PDF requires a password")  # noqa: TRY003
-        extracted = tuple((index, page.extract_text() or "") for index, page in enumerate(reader.pages, start=1))
-    except ValueError:
-        raise
-    except (PdfReadError, OSError, TypeError, KeyError, AssertionError) as error:
+            raise ValueError("PDF requires a password")  # noqa: TRY003, TRY301
+        extracted = tuple((index, _extract_page_text(page)) for index, page in enumerate(reader.pages, start=1))
+    except Exception as error:
+        # pypdf can also raise codec, decompression and recursion errors when a
+        # later page is damaged. None may escape as a partially accepted PDF.
         raise ValueError("PDF document could not be parsed") from error  # noqa: TRY003
     if not extracted:
         raise ValueError("PDF document does not contain a page")  # noqa: TRY003
@@ -194,12 +215,22 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
     )
 
 
+def _extract_page_text(page: PageObject) -> str:
+    contents = page.get("/Contents")
+    if contents is not None:
+        contents = contents.get_object()
+        streams = contents if isinstance(contents, ArrayObject) else (contents,)
+        if any(not isinstance(stream.get_object(), (StreamObject, NullObject)) for stream in streams):
+            raise ValueError("PDF page has an invalid content stream")  # noqa: TRY003
+    return page.extract_text() or ""
+
+
 class PDFPageSourceAdapter:
     """Resolve one parsed page into a captured Source and read that page back."""
 
-    input_class = PDFPageInput
+    input_class: type[PDFPageInput] = PDFPageInput
     name = PDF_PAGE_SOURCE_NAME
-    source_class = PDFPageSource
+    source_class: type[PDFPageSource] = PDFPageSource
 
     async def resolve(self, value: PDFPageInput, /) -> PDFPageSource:
         source_id = _page_source_id(value.document_id, value.document_sha256, value.page_number)
@@ -227,7 +258,7 @@ class PDFPageTextEvidenceProjection:
 
     name = TEXT_EVIDENCE_PROJECTION_KEY.name
     version = TEXT_EVIDENCE_PROJECTION_KEY.version
-    source_class = PDFPageSource
+    source_class: type[PDFPageSource] = PDFPageSource
     output_class: type[BaseModel] = TextEvidence
 
     def project(self, source: PDFPageSource, /) -> TextEvidence:
@@ -272,10 +303,9 @@ async def search_pdf_pages(memory, question: str, limit: int = 10) -> tuple[Memo
                 entry_version_id=hit.entry_version_id,
             )
             entry = await memory.get(GetMemoryEntryRequest(citation=citation))
-            page_ids = tuple(source.source_id for source in entry.entry.sources)
-            if not page_ids:
+            if len(entry.entry.sources) != 1 or entry.entry.sources[0].source_type != PDF_PAGE_SOURCE_NAME:
                 continue
-            page_key = page_ids[0]
+            page_key = entry.entry.sources[0].source_id
             score = _overlap_score(entry.entry.text, terms)
             current = ranked.get(page_key)
             if current is None or score > current[0]:
@@ -290,7 +320,9 @@ async def search_pdf_pages(memory, question: str, limit: int = 10) -> tuple[Memo
 def _page_source_id(document_id: str, document_sha256: str, page_number: int) -> str:
     source_id = f"pdf:{quote(document_id, safe='')}:{document_sha256}:{page_number}"
     if len(source_id) > MAX_SOURCE_ID_LENGTH:
-        raise ValueError("PDF page source id must not exceed 256 characters")  # noqa: TRY003
+        # A separate namespace keeps hashed ids distinct from literal ids.
+        document_key = hashlib.sha256(document_id.encode("utf-8")).hexdigest()
+        source_id = f"pdf-sha256:{document_key}:{document_sha256}:{page_number}"
     return source_id
 
 
@@ -308,7 +340,7 @@ def _search_queries(question: str, terms: tuple[str, ...]) -> tuple[str, ...]:
     queries = [question.strip()]
     ranked = sorted(terms, key=lambda term: (term.isdigit() or len(term) >= 6, len(term)), reverse=True)
     queries.extend(ranked[:10])
-    queries.extend(f"{left} {right}" for left, right in zip(ranked, ranked[1:], strict=False))
+    queries.extend(f"{left} {right}" for left, right in pairwise(ranked))
     unique: list[str] = []
     for query in queries:
         if query and query not in unique:
@@ -333,6 +365,7 @@ class _CorpusPage:
     text: str
     page_number: int
     document_key: str
+    document_id: str
 
 
 async def _listed_pages(memory) -> tuple[_CorpusPage, ...]:
@@ -343,7 +376,7 @@ async def _listed_pages(memory) -> tuple[_CorpusPage, ...]:
     grouped: dict[str, _CorpusPage] = {}
     for record in listed.entries:
         entry = record.entry
-        if not entry.sources or not entry.text.strip():
+        if len(entry.sources) != 1 or entry.sources[0].source_type != PDF_PAGE_SOURCE_NAME or not entry.text.strip():
             continue
         source_id = entry.sources[0].source_id
         current = grouped.get(source_id)
@@ -354,6 +387,7 @@ async def _listed_pages(memory) -> tuple[_CorpusPage, ...]:
                 text=entry.text,
                 page_number=_trailing_page_number(source_id),
                 document_key=source_id.rsplit(":", 1)[0],
+                document_id=entry.text.partition("\n")[0],
             )
         else:
             current.text = f"{current.text}\n{entry.text}"
@@ -361,19 +395,21 @@ async def _listed_pages(memory) -> tuple[_CorpusPage, ...]:
 
 
 def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tuple[MemoryCitation, ...]:
-    folded_question = question.casefold()
+    folded_question = re.sub(r"\bfy\s*(\d{4})\b", r"\1", question.casefold())
     phrases = _expansion_phrases(folded_question)
-    query_counts = Counter(_stem(term) for term in analyze_fts_query(question).split() if term not in _QUERY_NOISE)
+    query_counts = Counter(
+        _stem(term) for term in analyze_fts_query(folded_question).split() if term not in _QUERY_NOISE
+    )
     token_rows = [Counter(_stem(term) for term in analyze_text(page.text).split()) for page in pages]
     lengths = [sum(counts.values()) for counts in token_rows]
     document_frequency: Counter[str] = Counter()
     for counts in token_rows:
-        document_frequency.update(counts)
+        document_frequency.update(counts.keys())
     total = len(pages)
     average = (sum(lengths) / total) if total else 1.0
     numeric = _NUMERIC_QUESTION.search(folded_question) is not None
     geography = _GEOGRAPHY_QUESTION.search(folded_question) is not None
-    folded_pages = [page.text.casefold() for page in pages]
+    folded_pages = [" ".join(page.text.casefold().split()) for page in pages]
     scores = {
         page.source_id: _lexical_score(
             counts,
@@ -389,9 +425,23 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
         )
         for page, counts, length, folded in zip(pages, token_rows, lengths, folded_pages, strict=True)
     }
+    document_names = {page.document_key: page.document_id for page in pages}
+    document_matches = {key: _matches_document_name(name, folded_question) for key, name in document_names.items()}
+    for page in pages:
+        if document_matches[page.document_key]:
+            scores[page.source_id] += 24.0
     _add_neighbor_bonus(pages, folded_pages, phrases, scores)
     ordered = sorted(pages, key=lambda page: (-scores[page.source_id], page.page_number, page.source_id))
     return tuple(page.citation for page in ordered[:limit])
+
+
+def _matches_document_name(document_id: str, question: str) -> bool:
+    # Finance document identifiers commonly append a year and filing type.
+    # The name before that suffix is useful even on tables without a company heading.
+    name = re.split(r"[_\s-](?=(?:19|20)\d{2}(?:\D|$))", document_id.casefold(), maxsplit=1)[0]
+    compact_name = re.sub(r"[^a-z0-9]", "", name)
+    pattern = r"\b" + r"[\W_]*".join(compact_name) + r"\b"
+    return len(compact_name) >= 2 and re.search(pattern, question) is not None
 
 
 def _lexical_score(
