@@ -144,3 +144,78 @@ def test_reopened_memory_returns_distinct_exact_scoped_pdf_citations(tmp_path):
             assert "Revenue" in record.entry.text
 
     asyncio.run(scenario())
+
+
+class SearchOnlyMemory:
+    """Expose search/get from a real scoped Runtime, without inventory listing."""
+
+    def __init__(self, memory):
+        self.memory = memory
+
+    async def search(self, request):
+        return await self.memory.search(request)
+
+    async def get(self, request):
+        return await self.memory.get(request)
+
+
+def test_financial_statement_evidence_survives_repeated_discussion_pages(tmp_path):
+    async def scenario():
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'statements.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        income = (
+            "Consolidated Statements of Income\n2022 2021 2020\n"
+            "Net sales 86000 79000 70000\nOperating income 11000 10000 9000\n"
+            "Income tax 1700 2100 1900\nNet earnings 9000 8000 7000"
+        )
+        cash = (
+            "Consolidated Statements of Cash Flows\n2022 2021 2020\n"
+            "Depreciation and amortization 2700 2600 2500\n"
+            "Purchases of property plant and equipment 5200 4600 4200\n"
+            "Cash provided by operating activities 10000 11000 10000"
+        )
+        discussion = (
+            "Management discussion of adjusted EBITDA less capex and operating income. "
+            "ACME FY2022 income statement cash flow statement depreciation and amortization. "
+            "Capital spending net revenue operating profit restructuring and impairment charges. "
+            "The following discussion explains non-GAAP adjustments rather than primary statements. "
+        )
+        documents = (
+            PDFDocumentInput(
+                document_id="ACME_2022_10K",
+                content=make_pdf(income, cash, *(discussion + f"Adjustment {i} 2022 1000 2000" for i in range(24))),
+            ),
+            PDFDocumentInput(
+                document_id="OTHER_2022_10K",
+                content=make_pdf(*(discussion * 3 + f"Competitor adjustment {i} 4000 5000 6000" for i in range(24))),
+            ),
+        )
+        locations = {}
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(ScopeDraft(title="Reports", summary="tables", idempotency_key="tables"))
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            for document in documents:
+                for page in parse_pdf_document(document):
+                    observation = project_source_for_transport(registry, await registry.resolve(page))
+                    locations[observation.name] = (page.document_id, page.page_number)
+                    await runtime.ingestion.submit(
+                        SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                    )
+            await flush_all(runtime.memory.for_scope(scope.scope_id), len(locations))
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            question = (
+                "What is ACME's FY2022 EBITDA less capex? Use operating income from the income statement "
+                "and depreciation and amortization from the cash flow statement."
+            )
+            for interface in (memory, SearchOnlyMemory(memory)):
+                citations = await search_pdf_pages(interface, question, limit=20)
+                found = set()
+                for citation in citations:
+                    entry = (await memory.get(GetMemoryEntryRequest(citation=citation))).entry
+                    found.add(locations[entry.sources[0].source_id])
+                assert len(found) == len(citations) <= 20
+                assert {("ACME_2022_10K", 1), ("ACME_2022_10K", 2)} <= found
+
+    asyncio.run(scenario())

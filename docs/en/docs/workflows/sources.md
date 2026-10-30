@@ -58,7 +58,15 @@ The result is a tuple of exact `MemoryCitation` values for distinct pages, which
 limits and blank questions return an empty tuple. Other Source types are excluded.
 
 Retrieval uses only the scoped public Memory API, with local lexical scoring and financial vocabulary
-expansion. Each query reads the current scope's PDF entries and scores their complete texts; work and
-temporary storage grow with the scoped corpus size. It does not require a model or network connection.
+expansion. A company named in the question prioritizes matching document identities. For questions
+about financial statements, a small part of the result budget preserves matching income, cash flow,
+and balance sheet pages identified by headings and numeric content. This keeps repeated discussion
+from crowding out tables needed for a question with several parts. Word inflections and fiscal-year
+prefixes are normalized for scoring, while the captured text stays unchanged.
+
+When inventory listing is available, each query reads the current scope's PDF entries and scores their
+complete texts; work and temporary storage grow with the scoped corpus size. With a search/get-only
+Memory, expanded lexical queries retrieve candidates, which use the same page selection logic. Neither
+path requires a model or network connection.
 Keep original PDFs indexed by their full digest so the returned physical page can be checked. A changed
 PDF receives a new identity; retain its previous bytes to keep earlier citations useful.
