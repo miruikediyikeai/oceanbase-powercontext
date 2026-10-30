@@ -40,7 +40,8 @@ Pass the complete original PDF bytes and a nonblank document ID to the parser. I
 page in order, starting at 1, including blank pages. Each page carries the SHA-256 of the complete PDF.
 PDFs readable with an empty password are accepted; invalid, truncated, or password-protected documents
 raise `ValueError` without returning partial pages. Text extraction preserves page boundaries and does
-not perform OCR.
+not perform OCR. The parser checks page-tree counts and Flate stream integrity, including text in
+form resources and font character maps, before accepting the document.
 
 Resolve each returned page with a `SourceDefinitionRegistry` containing `PDF_PAGE_SOURCE_DEFINITION`,
 then submit its `project_source_for_transport` observation through Runtime ingestion. Register

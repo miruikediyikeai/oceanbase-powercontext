@@ -38,6 +38,7 @@ Source 读写受所选 [Scope 与访问策略](scopes-and-access.md)约束。
 将完整原 PDF 字节和非空白文档 ID 交给解析器。结果按物理页顺序返回，从 1 开始，包含空白页。
 每页携带整个 PDF 的 SHA-256。可使用空密码读取的权限 PDF 属于合法输入；无效、截断或需要密码的
 文件以 `ValueError` 整体失败，不返回部分页面。文本提取保留页边界，不执行 OCR。
+接受文档前会核对页树计数及 Flate 压缩流完整性，检查范围包括表单资源和字体字符映射中的文本流。
 
 使用包含 `PDF_PAGE_SOURCE_DEFINITION` 的 `SourceDefinitionRegistry` 逐页 resolve，
 再通过 `project_source_for_transport` 生成 observation，并经 Runtime ingestion 提交。

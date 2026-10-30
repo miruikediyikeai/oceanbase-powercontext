@@ -21,6 +21,7 @@ import io
 import math
 import re
 import unicodedata
+import zlib
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -29,7 +30,15 @@ from urllib.parse import quote
 
 from pydantic import BaseModel, Field, field_validator
 from pypdf import PageObject, PdfReader
-from pypdf.generic import ArrayObject, NullObject, StreamObject
+from pypdf.generic import (
+    ArrayObject,
+    DecodedStreamObject,
+    DictionaryObject,
+    EncodedStreamObject,
+    NameObject,
+    NullObject,
+    StreamObject,
+)
 
 from powercontext.builtin.artifacts.memory.models import MemoryCitation
 from powercontext.builtin.artifacts.search import analyze_text
@@ -235,7 +244,9 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
         reader = PdfReader(io.BytesIO(value.content), strict=True)
         if reader.is_encrypted and reader.decrypt("") == 0:
             raise ValueError("PDF requires a password")  # noqa: TRY003, TRY301
-        extracted = tuple((index, _extract_page_text(page)) for index, page in enumerate(reader.pages, start=1))
+        pages = _document_pages(reader)
+        validated: set[int] = set()
+        extracted = tuple((index, _extract_page_text(page, validated)) for index, page in enumerate(pages, start=1))
     except Exception as error:
         # pypdf can also raise codec, decompression and recursion errors when a
         # later page is damaged. None may escape as a partially accepted PDF.
@@ -253,14 +264,128 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
     )
 
 
-def _extract_page_text(page: PageObject) -> str:
+def _document_pages(reader: PdfReader) -> tuple[PageObject, ...]:
+    root = reader.root_object["/Pages"]
+    if not isinstance(root, DictionaryObject) or root["/Type"] != "/Pages":
+        raise ValueError("PDF has no valid page tree")  # noqa: TRY003
+    expected = _page_tree_count(root, set())
+    pages = tuple(reader.pages)
+    if len(pages) != expected:
+        raise ValueError("PDF page tree could not be completely read")  # noqa: TRY003
+    return pages
+
+
+def _page_tree_count(node: object, ancestors: set[int]) -> int:
+    if not isinstance(node, DictionaryObject):
+        raise TypeError("PDF page tree contains an invalid node")  # noqa: TRY003
+    node_type = node["/Type"]
+    if node_type == "/Page":
+        return 1
+    if node_type != "/Pages" or id(node) in ancestors:
+        raise ValueError("PDF page tree contains an invalid type or cycle")  # noqa: TRY003
+    count = node["/Count"]
+    children = node["/Kids"]
+    if not isinstance(count, int) or count < 0 or not isinstance(children, ArrayObject):
+        raise ValueError("PDF page tree has invalid children or count")  # noqa: TRY003
+    ancestors.add(id(node))
+    try:
+        actual = sum(_page_tree_count(child.get_object(), ancestors) for child in children)
+    finally:
+        ancestors.remove(id(node))
+    if actual != count:
+        raise ValueError("PDF page count does not match its page tree")  # noqa: TRY003
+    return actual
+
+
+def _extract_page_text(page: PageObject, validated: set[int]) -> str:
     contents = page.get("/Contents")
     if contents is not None:
         contents = contents.get_object()
         streams = contents if isinstance(contents, ArrayObject) else (contents,)
         if any(not isinstance(stream.get_object(), (StreamObject, NullObject)) for stream in streams):
             raise ValueError("PDF page has an invalid content stream")  # noqa: TRY003
+        for stream in streams:
+            value = stream.get_object()
+            if isinstance(value, StreamObject):
+                _validate_text_stream(value, validated)
+    resources = page.get("/Resources")
+    if resources is not None:
+        _validate_text_resources(resources.get_object(), validated)
     return page.extract_text() or ""
+
+
+def _validate_text_stream(stream: StreamObject, validated: set[int]) -> None:
+    if id(stream) in validated:
+        return
+    validated.add(id(stream))
+    if not isinstance(stream, EncodedStreamObject):
+        return
+    filters = stream.get("/Filter")
+    filters = filters.get_object() if filters is not None else NullObject()
+    filters = (
+        tuple(filters) if isinstance(filters, ArrayObject) else (() if isinstance(filters, NullObject) else (filters,))
+    )
+    parameters = stream.get("/DecodeParms")
+    parameters = parameters.get_object() if parameters is not None else NullObject()
+    if isinstance(parameters, NullObject):
+        parameters = (NullObject(),) * len(filters)
+    elif isinstance(parameters, ArrayObject):
+        parameters = tuple(parameters)
+    else:
+        parameters = (parameters,)
+    if len(parameters) != len(filters):
+        raise ValueError("PDF filter parameters do not match its filters")  # noqa: TRY003
+    # pypdf deliberately recovers broken compressed streams, even in strict
+    # reader mode. Validate each compression envelope before accepting its text.
+    data = stream._data
+    for name, parameter in zip(filters, parameters, strict=True):
+        stage = EncodedStreamObject()
+        stage._data = data
+        stage[NameObject("/Filter")] = name.get_object()
+        stage[NameObject("/DecodeParms")] = parameter.get_object()
+        decoded = stage.get_data()
+        if name.get_object() in ("/FlateDecode", "/Fl"):
+            _validate_flate_envelope(data)
+        data = decoded
+    # Cache the fully decoded chain. In pypdf 6.19 a null /DecodeParms with
+    # multiple filters otherwise stops decoding after the first filter.
+    decoded_stream = DecodedStreamObject()
+    decoded_stream.set_data(data)
+    stream.decoded_self = decoded_stream
+
+
+def _validate_flate_envelope(data: bytes) -> None:
+    decoder = zlib.decompressobj()
+    pending = data
+    while pending:
+        decoder.decompress(pending, 1_048_576)
+        pending = decoder.unconsumed_tail
+    if not decoder.eof:
+        raise ValueError("PDF contains a truncated compressed stream")  # noqa: TRY003
+
+
+def _validate_text_resources(resources: object, validated: set[int]) -> None:
+    if not isinstance(resources, DictionaryObject):
+        raise TypeError("PDF text resources must be a dictionary")  # noqa: TRY003
+    if id(resources) in validated:
+        return
+    validated.add(id(resources))
+    fonts = resources.get("/Font", DictionaryObject()).get_object()
+    for font in fonts.values():
+        font = font.get_object()
+        mapping = font.get("/ToUnicode")
+        if mapping is not None:
+            mapping = mapping.get_object()
+            if isinstance(mapping, StreamObject):
+                _validate_text_stream(mapping, validated)
+    forms = resources.get("/XObject", DictionaryObject()).get_object()
+    for form in forms.values():
+        form = form.get_object()
+        if isinstance(form, StreamObject) and form.get("/Subtype") == "/Form":
+            _validate_text_stream(form, validated)
+            nested = form.get("/Resources")
+            if nested is not None:
+                _validate_text_resources(nested.get_object(), validated)
 
 
 class PDFPageSourceAdapter:
