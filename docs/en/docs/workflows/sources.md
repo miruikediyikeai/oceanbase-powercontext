@@ -42,6 +42,8 @@ PDFs readable with an empty password are accepted; invalid, truncated, or passwo
 raise `ValueError` without returning partial pages. Text extraction preserves page boundaries and does
 not perform OCR. The parser checks page-tree counts and Flate stream integrity, including text in
 form resources and font character maps, before accepting the document.
+For individually positioned glyphs, matching character sequences from layout extraction restore word
+and number spacing. All other text, including chart labels and rotated text, stays in the page.
 
 Resolve each returned page with a `SourceDefinitionRegistry` containing `PDF_PAGE_SOURCE_DEFINITION`,
 then submit its `project_source_for_transport` observation through Runtime ingestion. Register
@@ -58,12 +60,12 @@ The result is a tuple of exact `MemoryCitation` values for distinct pages, which
 `memory.get(GetMemoryEntryRequest(citation=citation))`, including after reopening Runtime. Nonpositive
 limits and blank questions return an empty tuple. Other Source types are excluded.
 
-Retrieval uses only the scoped public Memory API, with local lexical scoring and financial vocabulary
-expansion. A company named in the question prioritizes matching document identities. For questions
-about financial statements, a small part of the result budget preserves matching income, cash flow,
-and balance sheet pages identified by headings and numeric content. This keeps repeated discussion
-from crowding out tables needed for a question with several parts. Word inflections and fiscal-year
-prefixes are normalized for scoring, while the captured text stays unchanged.
+Retrieval uses the scoped public Memory API and combines independent rankings of original question
+terms and financial vocabulary expansions. Company names and fiscal years prioritize matching document
+identities. For questions about financial statements, a small part of the result budget preserves
+matching income, cash flow, and balance sheet pages identified by headings and numeric content,
+including adjacent pages marked as continuations. Word inflections and fiscal-year prefixes are
+normalized during scoring.
 
 When inventory listing is available, each query reads the current scope's PDF entries and scores their
 complete texts; work and temporary storage grow with the scoped corpus size. With a search/get-only

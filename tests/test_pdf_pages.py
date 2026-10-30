@@ -20,6 +20,8 @@ import asyncio
 import base64
 import hashlib
 import io
+import re
+from collections import Counter
 from typing import cast
 
 import pytest
@@ -82,6 +84,37 @@ def test_extract_all_physical_pages_with_numbers_and_permissions(password):
     ]
     assert all(page.document_id == "sample" for page in pages)
     assert all(page.document_sha256 == hashlib.sha256(raw).hexdigest() for page in pages)
+
+
+def test_positioned_glyphs_preserve_words_years_and_repeated_table_values():
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=600, height=800)
+    font = DictionaryObject({
+        NameObject("/Type"): NameObject("/Font"),
+        NameObject("/Subtype"): NameObject("/Type1"),
+        NameObject("/BaseFont"): NameObject("/Courier"),
+    })
+    page[NameObject("/Resources")] = DictionaryObject({
+        NameObject("/Font"): DictionaryObject({NameObject("/F1"): font}),
+    })
+    lines = ("Revenue 2022 1000 1000", "Operating income 500 400", "Cash flow 2022 2021")
+    stream = DecodedStreamObject()
+    # Each glyph has an explicit position. A trailing TJ advance has no visible
+    # effect before ET, but plain extraction incorrectly inserts a word space.
+    stream.set_data(
+        "\n".join(
+            f"BT /F1 12 Tf 1 0 0 1 {20 + 7.2 * column:.2f} {750 - 20 * row} Tm [<{ord(character):02x}> -1000] TJ ET"
+            for row, line in enumerate(lines)
+            for column, character in enumerate(line)
+        ).encode("ascii")
+        + b"\nBT /F1 12 Tf 0 1 -1 0 400 20 Tm (Rotated label) Tj ET"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    parsed = parse_pdf_document(PDFDocumentInput(document_id="positioned", content=buffer.getvalue()))
+    expected = Counter(re.findall(r"[a-z]+|\d+", ("\n".join(lines) + "\nRotated label").lower()))
+    assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == expected
 
 
 @pytest.mark.parametrize("raw", [b"", b"not a PDF", b"%PDF-1.7\ntruncated"])

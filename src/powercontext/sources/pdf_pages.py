@@ -160,6 +160,8 @@ _NEIGHBOR_BONUS = 6.0
 _PRECISE_PHRASE_LIMIT = 6
 _AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 _LEXICAL_TERMS = re.compile(r"[a-z]+|\d+")
+_YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
+_SPACED_GLYPHS = re.compile(r"\b(?:[A-Za-z0-9][^\S\r\n]+){3,}[A-Za-z0-9]\b")
 # A query can need several primary statements whose rows use different wording.
 # Heading detection excludes narrative references and requires numeric table content.
 _STATEMENT_INTENTS = (
@@ -311,7 +313,51 @@ def _extract_page_text(page: PageObject, validated: set[int]) -> str:
     resources = page.get("/Resources")
     if resources is not None:
         _validate_text_resources(resources.get_object(), validated)
-    return page.extract_text() or ""
+    text = page.extract_text() or ""
+    fragmented = _fragmented_glyph_count(text)
+    if not fragmented:
+        return text
+    # Some generators position every glyph and then append a TJ advance before
+    # ET. Plain extraction mistakes those unused advances for spaces inside words
+    # and numbers. Layout extraction uses the actual positions instead.
+    try:
+        layout = page.extract_text(extraction_mode="layout", layout_mode_strip_rotated=False) or ""
+    except (KeyError, TypeError, ValueError, NotImplementedError):
+        return text
+    if _fragmented_glyph_count(layout) < fragmented:
+        characters = Counter(character for character in text if not character.isspace())
+        if characters == Counter(character for character in layout if not character.isspace()):
+            return "\n".join(" ".join(line.split()) for line in layout.splitlines()).strip()
+    return _restore_positioned_runs(text, layout)
+
+
+def _fragmented_glyph_count(text: str) -> int:
+    return sum(sum(character.isalnum() for character in match[0]) for match in _SPACED_GLYPHS.finditer(text))
+
+
+def _restore_positioned_runs(text: str, layout: str) -> str:
+    positions = [index for index, character in enumerate(layout) if character.isalnum()]
+    compact = "".join(layout[index] for index in positions)
+
+    def restore(match: re.Match[str]) -> str:
+        needle = "".join(match[0].split())
+        candidates: set[str] = set()
+        offset = compact.find(needle)
+        while offset != -1:
+            candidate = layout[positions[offset] : positions[offset + len(needle) - 1] + 1]
+            if all(character.isalnum() or character.isspace() for character in candidate):
+                candidates.add(" ".join(candidate.split()))
+            offset = compact.find(needle, offset + 1)
+        if len(candidates) == 1:
+            candidate = candidates.pop()
+            if _fragmented_glyph_count(candidate) < _fragmented_glyph_count(match[0]):
+                return candidate
+        return match[0]
+
+    # Only restore spacing of matching character sequences, keeping the plain
+    # extraction's ordering, chart labels, rotated text, and every repeated digit.
+    # Layout mode can omit those items, so replacing a complete page is unsafe.
+    return _SPACED_GLYPHS.sub(restore, text)
 
 
 def _validate_text_stream(stream: StreamObject, validated: set[int]) -> None:
@@ -542,14 +588,32 @@ def _corpus_pages(records: Iterable[MemoryEntryRecord]) -> tuple[_CorpusPage, ..
 
 def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tuple[MemoryCitation, ...]:
     folded_question = _normalize_question(question)
+    document_names = {page.document_key: page.document_id for page in pages}
+    year = max(_YEAR.findall(folded_question), default="")
+    priorities = {
+        key: (matched, matched and bool(year) and year in _YEAR.findall(name))
+        for key, name in document_names.items()
+        for matched in (_matches_document_name(name, folded_question),)
+    }
+    identity_terms = {
+        _stem(term)
+        for key, name in document_names.items()
+        if priorities[key][0]
+        for term in _LEXICAL_TERMS.findall(name.casefold())
+    }
     phrases = _expansion_phrases(folded_question)
-    query_counts = Counter(_stem(term) for term in _LEXICAL_TERMS.findall(folded_question) if term not in _QUERY_NOISE)
-    query_weights = {term: 1.0 + math.log(count) for term, count in query_counts.items()}
+    query_counts = Counter(
+        _stem(term)
+        for term in _LEXICAL_TERMS.findall(folded_question)
+        if term not in _QUERY_NOISE and not _YEAR.fullmatch(term) and _stem(term) not in identity_terms
+    )
+    literal_weights = {term: 1.0 + math.log(count) for term, count in query_counts.items()}
+    query_weights = literal_weights.copy()
     for phrase in phrases:
         for term in _LEXICAL_TERMS.findall(phrase):
             if term not in _QUERY_NOISE:
                 query_weights.setdefault(_stem(term), 0.35)
-    normalized_pages = [unicodedata.normalize("NFKC", page.text).casefold() for page in pages]
+    normalized_pages = [unicodedata.normalize("NFKC", page.text.partition("\n")[2]).casefold() for page in pages]
     token_rows = [Counter(_stem(term) for term in _LEXICAL_TERMS.findall(text)) for text in normalized_pages]
     lengths = [sum(counts.values()) for counts in token_rows]
     document_frequency: Counter[str] = Counter()
@@ -575,19 +639,49 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
         )
         for page, counts, length, folded in zip(pages, token_rows, lengths, folded_pages, strict=True)
     }
-    document_names = {page.document_key: page.document_id for page in pages}
-    document_matches = {key: _matches_document_name(name, folded_question) for key, name in document_names.items()}
+    literal_scores = {
+        page.source_id: _lexical_score(
+            counts,
+            length,
+            folded,
+            query_weights=literal_weights,
+            document_frequency=document_frequency,
+            total=total,
+            average=average,
+            phrases=(),
+            numeric=False,
+            geography=False,
+        )
+        for page, counts, length, folded in zip(pages, token_rows, lengths, folded_pages, strict=True)
+    }
     _add_neighbor_bonus(pages, folded_pages, phrases, scores)
+    # Rank fusion preserves specific query terms even when several financial
+    # expansions match a generic discussion page. Their numeric scores have
+    # different scales and must not compete through unbounded phrase bonuses.
+    fused: Counter[str] = Counter()
+    for channel in (literal_scores, scores):
+        ranked = sorted(
+            pages,
+            key=lambda page: (
+                tuple(not flag for flag in priorities[page.document_key]),
+                -channel[page.source_id],
+                page.page_number,
+                page.source_id,
+            ),
+        )
+        for rank, page in enumerate(ranked, start=1):
+            if channel[page.source_id] > 0:
+                fused[page.source_id] += 1.0 / (20 + rank)
     ordered = sorted(
         pages,
         key=lambda page: (
-            not document_matches[page.document_key],
-            -scores[page.source_id],
+            tuple(not flag for flag in priorities[page.document_key]),
+            -fused[page.source_id],
             page.page_number,
             page.source_id,
         ),
     )
-    return _select_evidence_pages(ordered, folded_question, document_matches, limit)
+    return _select_evidence_pages(ordered, folded_question, priorities, limit)
 
 
 def _normalize_question(question: str) -> str:
@@ -598,11 +692,11 @@ def _normalize_question(question: str) -> str:
 def _select_evidence_pages(
     ordered: list[_CorpusPage],
     question: str,
-    document_matches: dict[str, bool],
+    priorities: dict[str, tuple[bool, bool]],
     limit: int,
 ) -> tuple[MemoryCitation, ...]:
-    focused = any(document_matches.values())
-    year = max(re.findall(r"(?<!\d)(?:19|20)\d{2}(?!\d)", question), default="")
+    best_priority = max(priorities.values())
+    year = max(_YEAR.findall(question), default="")
     headers = {page.source_id: page.text.partition("\n")[2][:1200].casefold() for page in ordered}
     anchors: dict[str, _CorpusPage] = {}
     for intent, heading in _STATEMENT_INTENTS:
@@ -612,7 +706,7 @@ def _select_evidence_pages(
             (
                 page
                 for page in ordered
-                if (not focused or document_matches[page.document_key])
+                if priorities[page.document_key] == best_priority
                 and heading.search(headers[page.source_id])
                 and len(_AMOUNT_PATTERN.findall(page.text)) >= 8
             ),
@@ -623,9 +717,14 @@ def _select_evidence_pages(
         )
         for _, page in zip(range(2), candidates, strict=False):
             anchors[page.source_id] = page
+    locations = {(page.document_key, page.page_number): page for page in ordered}
+    for anchor in tuple(anchors.values()):
+        following = locations.get((anchor.document_key, anchor.page_number + 1))
+        if following is not None and re.search(r"\bcontinu(?:ed|ation)\b", headers[following.source_id][:500]):
+            anchors[following.source_id] = following
     # Reserve a small part of the result for each requested primary statement;
     # discussion pages remain eligible for the rest of the evidence budget.
-    selected = dict.fromkeys(tuple(anchors)[: max(1, limit // 2)])
+    selected = dict.fromkeys(tuple(anchors)[: limit // 2])
     for page in ordered:
         if len(selected) >= limit:
             break

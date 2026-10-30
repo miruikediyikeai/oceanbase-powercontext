@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from powercontext.builtin.artifacts.memory import MemoryEntryInput
 from powercontext.builtin.persistence.sqlite import SQLiteConfig
 from powercontext.builtin.runtime import (
@@ -217,5 +219,73 @@ def test_financial_statement_evidence_survives_repeated_discussion_pages(tmp_pat
                     found.add(locations[entry.sources[0].source_id])
                 assert len(found) == len(citations) <= 20
                 assert {("ACME_2022_10K", 1), ("ACME_2022_10K", 2)} <= found
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("interference", ["other-year", "statement-continuation", "specific-topic"])
+def test_evidence_survives_other_years_continued_tables_and_generic_financial_terms(tmp_path, interference):
+    async def scenario():
+        discussion = (
+            "Net revenue total revenue net sales operating profit operating income. "
+            "Cash flow statement depreciation and amortization capital expenditure capital spending. "
+            "2022 2021 2020 9500 9000 8500 8000 7500 7000 6500 6000. "
+        )
+        if interference == "other-year":
+            target = "Revenue from licensing agreements was 1200 in 2022."
+            documents = (
+                PDFDocumentInput(document_id="ACME_2022_10K", content=make_pdf(target)),
+                PDFDocumentInput(document_id="ACME_2023_10K", content=make_pdf(*(discussion for _ in range(24)))),
+            )
+            question = "What was ACME's revenue in FY2022?"
+            expected_page = 1
+        elif interference == "statement-continuation":
+            header = (
+                "Consolidated Statements of Cash Flows\n2022 2021 2020\n"
+                "Operating activities 11000 10000 9000\nInvesting activities 8000 7000 6000"
+            )
+            continuation = "Continued\nDepreciation and amortization 1200 1100 1000"
+            documents = (
+                PDFDocumentInput(
+                    document_id="ACME_2022_10K",
+                    content=make_pdf(header, continuation, *(discussion for _ in range(24))),
+                ),
+            )
+            question = "What was ACME's depreciation and amortization from the cash flow statement in FY2022?"
+            expected_page = 2
+        else:
+            target = "Royalty revenue from the Meridian licensing agreement was 1200 in 2022."
+            documents = (
+                PDFDocumentInput(
+                    document_id="ACME_2022_10K", content=make_pdf(target, *(discussion for _ in range(24)))
+                ),
+            )
+            question = "What revenue did ACME recognize under the Meridian licensing agreement in FY2022?"
+            expected_page = 1
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'recall.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        locations = {}
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(ScopeDraft(title="Reports", summary="tables", idempotency_key="recall"))
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            for document in documents:
+                for page in parse_pdf_document(document):
+                    observation = project_source_for_transport(registry, await registry.resolve(page))
+                    locations[observation.name] = (page.document_id, page.page_number)
+                    await runtime.ingestion.submit(
+                        SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                    )
+            await flush_all(runtime.memory.for_scope(scope.scope_id), len(locations))
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            for interface in (memory, SearchOnlyMemory(memory)):
+                citations = await search_pdf_pages(interface, question, limit=20)
+                found = set()
+                for citation in citations:
+                    record = await memory.get(GetMemoryEntryRequest(citation=citation))
+                    found.add(locations[record.entry.sources[0].source_id])
+                assert len(citations) == len(found) <= 20
+                assert ("ACME_2022_10K", expected_page) in found
 
     asyncio.run(scenario())
