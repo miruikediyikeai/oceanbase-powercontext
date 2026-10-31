@@ -45,7 +45,6 @@ from powercontext.builtin.artifacts.search import analyze_text
 from powercontext.builtin.runtime import GetMemoryEntryRequest, MemoryEntryRecord, SearchMemoryRequest
 from powercontext.limits import MAX_SOURCE_ID_LENGTH
 from powercontext.sources import TEXT_EVIDENCE_PROJECTION_KEY, AdapterSourceDefinition, TextEvidence
-from powercontext.sources._pdf_text import extract_page_body
 from powercontext.sources.models import Source, SourceMaterialization
 
 PDF_PAGE_SOURCE_NAME = "pdf-page"
@@ -87,7 +86,8 @@ _QUERY_NOISE = frozenset(
         "what which who how when where does did has have had any the a an and or of to for from in on by with "
         "is are was were be been being this that these those it its their our not no if then else state answer "
         "respond question calculate define using give only use shown within assuming perspective investment "
-        "analyst details report reported directly explicitly outlined quantity less unadjusted fy"
+        "analyst details report reported directly explicitly outlined quantity less unadjusted fy "
+        "disclose disclosed disclosure regarding provide provided"
     ).split()
 )
 _GEOGRAPHY_QUESTION = re.compile(r"geograph|countries|regions|primarily operates")
@@ -108,6 +108,7 @@ _REGION_NAMES = (
 # Analyst wording rarely appears on the statement or note page that actually answers it.
 _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (_GEOGRAPHY_QUESTION, ("reportable segments", "organized into", "geographic")),
+    (re.compile(r"segments?|business units|business divisions"), ("reportable segments", "operating segments")),
     (re.compile(r"legal|litigation|lawsuit|battles"), ("legal proceedings", "litigation", "legal matters")),
     (
         re.compile(r"income statement|p&l|p l statement|profit and loss"),
@@ -117,23 +118,40 @@ _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
         re.compile(r"cash flow"),
         ("statement of cash flows", "statements of cash flows", "depreciation and amortization"),
     ),
-    (re.compile(r"capex|capital expenditure"), ("purchases of property", "capital expenditure", "capital spending")),
+    (
+        re.compile(r"capex|capital expenditure|fixed assets|purchas\w* (?:land|buildings|equipment)|expand.*facilit"),
+        ("purchases of property", "capital expenditure", "capital spending", "property plant and equipment"),
+    ),
     (
         re.compile(r"ebitda|depreciation|amortization|\bd\s*&\s*a\b"),
         ("depreciation and amortization", "operating profit", "operating income"),
     ),
-    (re.compile(r"restructur"), ("restructuring and impairment", "restructuring charges")),
+    (
+        re.compile(r"restructur|downsiz|clos(?:ing|ure of) facilit"),
+        ("restructuring and impairment", "restructuring charges", "restructuring costs"),
+    ),
     (re.compile(r"dividend"), ("dividends paid", "cash dividends")),
-    (re.compile(r"repurchase|buyback"), ("share repurchase", "treasury stock")),
+    (re.compile(r"repurchas|buyback|buy(?:ing)? back|bought back"), ("share repurchase", "treasury stock")),
     (re.compile(r"effective tax|tax rate"), ("effective tax", "income taxes")),
     (re.compile(r"goodwill"), ("goodwill",)),
     (re.compile(r"gross margin|gross profit"), ("gross profit", "cost of sales")),
     (re.compile(r"\brevenues?\b|\b(?:net )?sales\b|\bturnover\b"), ("net revenue", "net sales", "total revenue")),
-    (re.compile(r"interest expense|long-term debt"), ("interest expense", "long-term debt")),
+    (
+        re.compile(r"interest expense|long.term debt|borrowings?|debt maturit|repay\w* (?:loans?|debt)"),
+        ("interest expense", "long-term debt", "debt maturities"),
+    ),
     (re.compile(r"inventor"), ("inventories",)),
-    (re.compile(r"receivable"), ("accounts receivable", "receivables")),
-    (re.compile(r"\blease"), ("operating lease",)),
-    (re.compile(r"pension"), ("pension", "retiree medical")),
+    (re.compile(r"receivable|credit sales|collect\w*.*customers"), ("accounts receivable", "trade receivables")),
+    (re.compile(r"payables?|pay\w*.*suppliers|suppliers.*pay"), ("accounts payable", "trade payables")),
+    (re.compile(r"\blease|\brent(?:ed|al|ing)?\b"), ("operating lease", "lease payments")),
+    (re.compile(r"pension|retire\w* benefits"), ("pension", "retirement benefits", "retiree medical")),
+    (re.compile(r"stock options?|option.*awarded|option.*valu"), ("stock options", "black scholes", "share-based")),
+    (
+        re.compile(r"uncertain.*tax|tax.*uncertain|deductions.*tax returns"),
+        ("unrecognized tax benefits", "uncertain tax positions"),
+    ),
+    (re.compile(r"committ\w* purchas|purchase obligations?"), ("purchase commitments", "purchase obligations")),
+    (re.compile(r"currenc(?:y|ies)|exchange rates?"), ("foreign currency translation", "exchange rates")),
     (re.compile(r"employee|workforce|headcount"), ("number of employees", "employees")),
     (
         re.compile(r"working capital|current ratio|quick ratio"),
@@ -142,9 +160,10 @@ _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (re.compile(r"free cash|\bfcf\b"), ("free cash flow", "cash flows", "capital expenditure")),
     (re.compile(r"return on assets|\broa\b"), ("net income", "total assets")),
     (re.compile(r"return on equity|\broe\b"), ("net income", "stockholders equity", "shareholders equity")),
-    (re.compile(r"earnings per share|\beps\b"), ("earnings per share",)),
+    (re.compile(r"earnings per share|\beps\b|dilut\w*.*(?:earnings|shares?)"), ("earnings per share", "antidilutive")),
     (re.compile(r"selling general|\bsg&a\b|\bsga\b"), ("selling general and administrative",)),
-    (re.compile(r"research and development"), ("research and development",)),
+    (re.compile(r"research and development|develop\w* new products"), ("research and development",)),
+    (re.compile(r"\blifo\b|last.in.*first.out|most recently purchased"), ("lifo", "last in first out")),
     (re.compile(r"contingenc"), ("commitments and contingencies",)),
     (re.compile(r"subsequent event"), ("subsequent events",)),
     (re.compile(r"share-based|stock-based|share based|stock based"), ("share-based compensation",)),
@@ -369,7 +388,9 @@ def _extract_page_text(page: PageObject, validated: set[int]) -> str:
     resources = page.get("/Resources")
     if resources is not None:
         _validate_text_resources(resources.get_object(), validated)
-    text = extract_page_body(page)
+    # Clipping and rendering mode do not make text unextractable. Preserve the
+    # complete pypdf output rather than applying visibility-based deletion.
+    text = page.extract_text() or ""
     fragmented = _fragmented_glyph_count(text)
     if not fragmented:
         return text
@@ -717,6 +738,8 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
     # expansions match a generic discussion page. Their numeric scores have
     # different scales and must not compete through unbounded phrase bonuses.
     fused: Counter[str] = Counter()
+    channel_leaders: list[str] = []
+    best_priority = max(priorities.values())
     for channel in (literal_scores, scores):
         ranked = sorted(
             pages,
@@ -730,6 +753,15 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
         for rank, page in enumerate(ranked, start=1):
             if channel[page.source_id] > 0:
                 fused[page.source_id] += 1.0 / (20 + rank)
+        # A synonym can have no literal overlap at all. Fusion alone can then
+        # discard even the best expanded hit behind many middling shared hits.
+        leaders = (
+            page.source_id
+            for page in ranked
+            if channel[page.source_id] > 0 and priorities[page.document_key] == best_priority
+        )
+        for _, source_id in zip(range(limit // 5), leaders, strict=False):
+            channel_leaders.append(source_id)
     ordered = sorted(
         pages,
         key=lambda page: (
@@ -739,7 +771,9 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
             page.source_id,
         ),
     )
-    return _select_evidence_pages(ordered, folded_question, priorities, limit, year=year)
+    return _select_evidence_pages(
+        ordered, folded_question, priorities, limit, year=year, channel_leaders=tuple(channel_leaders)
+    )
 
 
 def _normalize_question(question: str) -> str:
@@ -793,6 +827,7 @@ def _select_evidence_pages(
     limit: int,
     *,
     year: str,
+    channel_leaders: tuple[str, ...],
 ) -> tuple[MemoryCitation, ...]:
     bodies = {
         page.source_id: unicodedata.normalize("NFKC", page.text.partition("\n")[2]).casefold() for page in ordered
@@ -807,6 +842,10 @@ def _select_evidence_pages(
     # Reserve a small part of the result for each requested primary statement;
     # discussion pages remain eligible for the rest of the evidence budget.
     selected = dict.fromkeys(tuple(anchors)[: limit // 2])
+    for source_id in channel_leaders:
+        if len(selected) >= limit:
+            break
+        selected.setdefault(source_id)
     for page in ordered:
         if len(selected) >= limit:
             break

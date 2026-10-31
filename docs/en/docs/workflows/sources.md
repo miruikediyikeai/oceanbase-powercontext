@@ -44,10 +44,8 @@ not perform OCR. The parser checks page-tree counts and Flate stream integrity, 
 form resources and font character maps, before accepting the document.
 For individually positioned glyphs, matching character sequences from layout extraction restore word
 and number spacing. All other text, including chart labels and rotated text, stays in the page.
-Explicit clipping paths exclude text only when its complete font bounds and every contributing
-text position prove it lies outside the clipping region. Ambiguous positions, font metrics, and form
-coordinates retain their text. This prevents wholly clipped duplicate paragraphs from inflating the
-page body without deduplicating legitimate repeated table values.
+All text extractable by pypdf is retained, including text drawn under clipping paths and repeated
+table values. Visual clipping is not used to delete captured content.
 
 Resolve each returned page with a `SourceDefinitionRegistry` containing `PDF_PAGE_SOURCE_DEFINITION`,
 then submit its `project_source_for_transport` observation through Runtime ingestion. Register
@@ -70,6 +68,9 @@ identities. For questions about financial statements, a small part of the result
 matching income, cash flow, and balance sheet pages identified by headings and numeric content,
 including adjacent pages marked as continuations. Word inflections and fiscal-year prefixes are
 normalized during scoring.
+Financial paraphrases map to accounting terms, such as supplier payment obligations to accounts payable
+and rented buildings to operating leases. A bounded part of the result budget preserves the strongest
+hits from both the original and expanded queries, including note pages with no literal query overlap.
 Statement recognition tolerates words split across PDF text objects, plural and reordered titles,
 and titles drawn after the table. Financial row concepts distinguish primary tables from indexes
 and narrative references. Ratio questions preserve the statements needed for both operands,

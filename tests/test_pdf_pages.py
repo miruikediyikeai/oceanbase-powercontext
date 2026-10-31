@@ -119,7 +119,7 @@ def test_positioned_glyphs_preserve_words_years_and_repeated_table_values():
 
 @pytest.mark.parametrize("path", ["0 0 600 100 re", "0 0 m 600 0 l 600 100 l 0 100 l h"])
 @pytest.mark.parametrize("transform", ["", "0.5 0 0 0.5 100 100 cm"])
-def test_fully_clipped_text_does_not_duplicate_page_body(path, transform):
+def test_extractable_text_is_preserved_with_clipping_and_repeated_values(path, transform):
     writer = PdfWriter()
     writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("", "Revenue 1000"))))
     page = writer.pages[-1]
@@ -145,7 +145,12 @@ def test_fully_clipped_text_does_not_duplicate_page_body(path, transform):
     pages = parse_pdf_document(PDFDocumentInput(document_id="clipped", content=buffer.getvalue()))
     assert [page.page_number for page in pages] == [1, 2]
     assert pages[0].text == ""
-    assert Counter(re.findall(r"[a-z]+|\d+", pages[1].text.lower())) == Counter({"revenue": 2, "1000": 2})
+    assert Counter(re.findall(r"[a-z]+|\d+", pages[1].text.lower())) == Counter({
+        "revenue": 3,
+        "1000": 3,
+        "clipped": 1,
+        "duplicate": 1,
+    })
 
 
 def test_clipping_preserves_visible_buffered_raised_and_rotated_text():
@@ -173,7 +178,7 @@ def test_clipping_preserves_visible_buffered_raised_and_rotated_text():
     assert counts >= Counter({"visible": 1, "1000": 1, "raised": 1, "2000": 1, "rotated": 1, "3000": 1})
 
 
-def test_text_in_an_empty_clipping_region_still_produces_a_blank_physical_page():
+def test_extractable_text_in_an_empty_clipping_region_and_blank_physical_page_are_preserved():
     writer = PdfWriter()
     writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Clipped", ""))))
     stream = DecodedStreamObject()
@@ -182,7 +187,7 @@ def test_text_in_an_empty_clipping_region_still_produces_a_blank_physical_page()
     buffer = io.BytesIO()
     writer.write(buffer)
     pages = parse_pdf_document(PDFDocumentInput(document_id="empty-clip", content=buffer.getvalue()))
-    assert [(page.page_number, page.text) for page in pages] == [(1, ""), (2, "")]
+    assert [(page.page_number, page.text) for page in pages] == [(1, "Clipped"), (2, "")]
 
 
 @pytest.mark.parametrize("show_text", ["(Shifted 1000) '", '0 0 (Shifted 1000) "'])

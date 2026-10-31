@@ -225,6 +225,53 @@ class SearchOnlyMemory:
         return await self.memory.get(request)
 
 
+@pytest.mark.parametrize(
+    ("topic", "evidence"),
+    [
+        ("money spent buying back common shares", "Share repurchases\nTreasury stock acquired for 2500."),
+        ("payment obligations to suppliers", "Accounts payable\nTrade payables were 3500."),
+        ("future payments on rented buildings", "Operating leases\nMinimum lease payments total 4500."),
+        (
+            "business units used to assess financial performance",
+            "Reportable segments\nSegment operating profit was 5500.",
+        ),
+    ],
+)
+def test_financial_paraphrases_retrieve_note_evidence(tmp_path, topic, evidence):
+    async def scenario():
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'paraphrases.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        question = f"What did ACME disclose about {topic} in FY2022?"
+        discussion = f"Management discussed {topic}. No amounts are provided in this overview. "
+        document = PDFDocumentInput(
+            document_id="ACME_2022_10K", content=make_pdf(*(discussion for _ in range(24)), evidence)
+        )
+        pages = parse_pdf_document(document)
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(ScopeDraft(title="Reports", summary="notes", idempotency_key="notes"))
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            observations = [project_source_for_transport(registry, await registry.resolve(page)) for page in pages]
+            for observation in observations:
+                await runtime.ingestion.submit(
+                    SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                )
+            await flush_all(runtime.memory.for_scope(scope.scope_id), len(pages))
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            for interface in (memory, SearchOnlyMemory(memory)):
+                citations = await search_pdf_pages(interface, question, limit=20)
+                references = {
+                    source.source_id
+                    for citation in citations
+                    for source in (await memory.get(GetMemoryEntryRequest(citation=citation))).entry.sources
+                }
+                assert len(references) == len(citations) <= 20
+                assert observations[-1].name in references
+
+    asyncio.run(scenario())
+
+
 def test_financial_statement_evidence_survives_repeated_discussion_pages(tmp_path):
     async def scenario():
         config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'statements.db'}"))
