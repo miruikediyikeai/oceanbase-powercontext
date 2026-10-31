@@ -156,6 +156,48 @@ def test_reopened_memory_returns_distinct_exact_scoped_pdf_citations(tmp_path):
     asyncio.run(scenario())
 
 
+def test_complete_large_page_survives_ingestion_restart_and_exact_citation(tmp_path):
+    async def scenario():
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'large-page.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        text = "Revenue and operating expenses 2022 1000 1000. " * 400
+        document = PDFDocumentInput(document_id="ACME_2022_10K", content=make_pdf(text, ""))
+        pages = parse_pdf_document(document)
+        assert len(pages[0].text.encode("utf-8")) > 8192
+        observations = [project_source_for_transport(registry, await registry.resolve(page)) for page in pages]
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(ScopeDraft(title="PDF", summary="large pages", idempotency_key="large"))
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            for _ in range(2):
+                for observation in observations:
+                    await runtime.ingestion.submit(
+                        SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                    )
+            await flush_all(runtime.memory.for_scope(scope.scope_id), len(pages))
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            citations = await search_pdf_pages(memory, "ACME revenue in FY2022", limit=20)
+            assert len(citations) == 2
+            saved = [await memory.get(GetMemoryEntryRequest(citation=citation)) for citation in citations]
+            assert {record.entry.text for record in saved} == {
+                f"{page.document_id}\n{page.text}".strip() for page in pages
+            }
+            assert {record.entry.sources[0].source_id for record in saved} == {o.name for o in observations}
+            citation = saved[0].citation
+        async with open_builtin_contexts(config) as contexts:
+            await (await contexts.get(scope.scope_id)).artifacts.memory.rebuild_projections()
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            record = await memory.get(GetMemoryEntryRequest(citation=citation))
+            assert record == saved[0]
+            hits = await search_pdf_pages(SearchOnlyMemory(memory), "ACME revenue in FY2022", limit=20)
+            hit_texts = [(await memory.get(GetMemoryEntryRequest(citation=hit))).entry.text for hit in hits]
+            assert f"{pages[0].document_id}\n{pages[0].text}".strip() in hit_texts
+
+    asyncio.run(scenario())
+
+
 def test_document_ids_are_opaque_when_locating_a_company_statement(tmp_path):
     async def scenario():
         config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'opaque.db'}"))
@@ -289,14 +331,17 @@ class SearchOnlyMemory:
         ),
     ],
 )
-def test_financial_paraphrases_retrieve_note_evidence(tmp_path, topic, evidence):
+@pytest.mark.parametrize(
+    ("document_id", "company"), [("ACME_2022_10K", "ACME"), ("ACMEHOLDINGS_2022_10K", "Acme Holdings")]
+)
+def test_financial_paraphrases_retrieve_note_evidence(tmp_path, topic, evidence, document_id, company):
     async def scenario():
         config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'paraphrases.db'}"))
         registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
-        question = f"What did ACME disclose about {topic} in FY2022?"
-        discussion = f"Management discussed {topic}. No amounts are provided in this overview. "
+        question = f"What did {company} disclose about {topic} in FY2022?"
+        discussion = f"Management at {company} discussed {topic}. No amounts are provided in this overview. "
         document = PDFDocumentInput(
-            document_id="ACME_2022_10K", content=make_pdf(*(discussion for _ in range(24)), evidence)
+            document_id=document_id, content=make_pdf(*(discussion for _ in range(24)), evidence)
         )
         pages = parse_pdf_document(document)
         async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:

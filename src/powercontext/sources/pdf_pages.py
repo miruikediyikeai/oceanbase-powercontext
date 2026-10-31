@@ -24,6 +24,7 @@ import unicodedata
 import zlib
 from collections import Counter
 from collections.abc import Iterable
+from copy import copy
 from dataclasses import dataclass
 from itertools import chain, pairwise
 from urllib.parse import quote
@@ -32,12 +33,14 @@ from pydantic import BaseModel, Field, field_validator
 from pypdf import PageObject, PdfReader
 from pypdf.generic import (
     ArrayObject,
+    ContentStream,
     DecodedStreamObject,
     DictionaryObject,
     EncodedStreamObject,
     NameObject,
     NullObject,
     StreamObject,
+    TextStringObject,
 )
 
 from powercontext.builtin.artifacts.memory.models import MemoryCitation
@@ -180,6 +183,32 @@ _NEIGHBOR_BONUS = 6.0
 _PRECISE_PHRASE_LIMIT = 6
 _AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 _LEXICAL_TERMS = re.compile(r"[a-z]+|\d+")
+_TEXT_LIGATURES = str.maketrans({"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"})
+_WORD_PARTICLES = frozenset({
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "if",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "our",
+    "per",
+    "the",
+    "to",
+    "was",
+    "we",
+    "with",
+})
 _YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 _FISCAL_YEAR = re.compile(r"\b(?:fy\s*|fiscal\s+year\s+(?:ended\s+)?)(19\d{2}|20\d{2})\b")
 
@@ -387,11 +416,135 @@ def _extract_page_text(page: PageObject, validated: set[int]) -> str:
     resources = page.get("/Resources")
     if resources is not None:
         _validate_text_resources(resources.get_object(), validated)
-    # Clipping and rendering mode do not make text unextractable. Preserve the
-    # complete pypdf output rather than applying visibility-based deletion.
-    # Rejoining glyphs can change regex token counts even when every character
-    # remains. The captured page retains extraction output without such edits.
-    return page.extract_text() or ""
+    plain = page.extract_text() or ""
+    if "\x00" in plain:
+        page = _restore_actual_text_font_maps(page)
+        plain = page.extract_text() or ""
+    return _recover_word_boundaries(page, plain.translate(_TEXT_LIGATURES))
+
+
+def _restore_actual_text_font_maps(page: PageObject) -> PageObject:
+    """Recover missing glyph mappings from this PDF's own marked content.
+
+    Some producers map ligatures to NUL in ToUnicode and supply their Unicode
+    text in ActualText instead. pypdf ignores the latter. Only unambiguous
+    single-glyph replacements of explicit NUL mappings are used here, and
+    fonts/resources are copied so shared objects on other pages stay intact.
+    """
+    resources = page.get("/Resources")
+    contents = page.get_contents()
+    if resources is None or contents is None:
+        return page
+    resources = resources.get_object()
+    fonts = resources.get("/Font")
+    if fonts is None:
+        return page
+    fonts = fonts.get_object()
+    properties = resources.get("/Properties", DictionaryObject()).get_object()
+    replacements = _actual_text_glyphs(contents, properties)
+    patched_fonts = DictionaryObject(fonts)
+    for name in {name for name, _ in replacements}:
+        if name not in fonts:
+            continue
+        font = fonts[name].get_object()
+        cmap = font.get("/ToUnicode")
+        if cmap is None:
+            continue
+        original = cmap.get_object().get_data()
+        recovered = original
+        for (key, glyph), values in replacements.items():
+            if key != name or len(values) != 1:
+                continue
+            pattern = rb"<" + glyph.hex().encode("ascii") + rb">\s*<0000>"
+            replacement = b"<" + glyph.hex().encode("ascii") + b"> <"
+            replacement += next(iter(values)).encode("utf-16-be").hex().encode("ascii") + b">"
+            recovered = re.sub(pattern, replacement, recovered, flags=re.IGNORECASE)
+        if recovered != original:
+            new_cmap = DecodedStreamObject()
+            new_cmap.set_data(recovered)
+            patched_font = DictionaryObject(font)
+            patched_font[NameObject("/ToUnicode")] = new_cmap
+            patched_fonts[NameObject(name)] = patched_font
+    result = copy(page)
+    patched_resources = DictionaryObject(resources)
+    patched_resources[NameObject("/Font")] = patched_fonts
+    result[NameObject("/Resources")] = patched_resources
+    return result
+
+
+def _actual_text_property(value: object, properties: DictionaryObject) -> str | None:
+    if isinstance(value, NameObject):
+        value = properties.get(value, DictionaryObject()).get_object()
+    actual = value.get("/ActualText") if isinstance(value, DictionaryObject) else None
+    return str(actual) if isinstance(actual, TextStringObject) else None
+
+
+def _shown_text_bytes(operands: list[object], operator: bytes) -> Iterable[bytes]:
+    values = operands[0] if operator == b"TJ" and isinstance(operands[0], ArrayObject) else (operands[-1],)
+    for value in values:
+        if isinstance(value, TextStringObject | bytes):
+            raw = value.original_bytes if isinstance(value, TextStringObject) else bytes(value)
+            if raw:
+                yield raw
+
+
+def _actual_text_glyphs(contents: ContentStream, properties: DictionaryObject) -> dict[tuple[str, bytes], set[str]]:
+    replacements: dict[tuple[str, bytes], set[str]] = {}
+    font_name = ""
+    saved_fonts: list[str] = []
+    marked: list[tuple[str | None, list[tuple[str, bytes]]]] = []
+    for operands, operator in contents.operations:
+        if operator == b"Tf":
+            font_name = str(operands[0])
+        elif operator == b"q":
+            saved_fonts.append(font_name)
+        elif operator == b"Q" and saved_fonts:
+            font_name = saved_fonts.pop()
+        elif operator in (b"BDC", b"BMC"):
+            prop = operands[-1].get_object()
+            marked.append((_actual_text_property(prop, properties), []))
+        elif operator in (b"Tj", b"TJ", b"'", b'"') and marked:
+            for _, glyphs in marked:
+                glyphs.extend((font_name, raw) for raw in _shown_text_bytes(operands, operator))
+        elif operator == b"EMC" and marked:
+            actual, glyphs = marked.pop()
+            if actual and len(glyphs) == 1 and len(glyphs[0][1]) <= 2:
+                replacements.setdefault(glyphs[0], set()).add(actual)
+    return replacements
+
+
+def _recover_word_boundaries(page: PageObject, plain: str) -> str:
+    fragments = tuple(
+        (left, right)
+        for left, right in re.findall(r"(?=\b([A-Za-z]+)\s+([A-Za-z]+)\b)", plain)
+        if min(len(left), len(right)) <= 3
+    )
+    if not fragments:
+        return plain
+    layout = (page.extract_text(extraction_mode="layout", layout_mode_strip_rotated=False) or "").translate(
+        _TEXT_LIGATURES
+    )
+    # Never lose rotated labels, repeated table amounts or any non-whitespace
+    # character. Layout is useful only when it actually resolves a split word.
+    if Counter(c for c in plain if not c.isspace()) != Counter(c for c in layout if not c.isspace()):
+        return plain
+    if Counter(re.findall(r"\d+", plain)) != Counter(re.findall(r"\d+", layout)):
+        return plain
+    before = Counter(_LEXICAL_TERMS.findall(plain.lower()))
+    for left, right in fragments:
+        word = left + right
+        if word.lower() not in before and (
+            {left.lower(), right.lower()} & _WORD_PARTICLES or (left[-1].islower() and right[0].isupper())
+        ):
+            # Layout occasionally joins separate labels at the ends of lines.
+            # Preserve their spaces unless the combined word occurs in the PDF.
+            layout = re.sub(r"\b" + re.escape(word) + r"\b", left + " " + right, layout)
+    after = Counter(_LEXICAL_TERMS.findall(layout.lower()))
+    if not 0.9 * before.total() <= after.total() <= 1.1 * before.total():
+        return plain
+    if not any(after[(left + right).lower()] > before[(left + right).lower()] for left, right in fragments):
+        return plain
+    return "\n".join(" ".join(line.split()) for line in layout.splitlines()).strip()
 
 
 def _validate_text_stream(stream: StreamObject, validated: set[int]) -> None:
@@ -628,7 +781,7 @@ def _corpus_pages(records: Iterable[MemoryEntryRecord]) -> tuple[_CorpusPage, ..
 
 def _document_priorities(pages: tuple[_CorpusPage, ...], question: str, year: str) -> dict[str, tuple[bool, bool]]:
     names = {page.document_key: page.document_id for page in pages}
-    matched = {key: _matches_document_name(name, question) for key, name in names.items()}
+    matched = {key: re.search(_document_name_pattern(name), question) is not None for key, name in names.items()}
     if any(matched.values()):
         return {key: (flag, flag and bool(year) and year in _YEAR.findall(names[key])) for key, flag in matched.items()}
 
@@ -673,10 +826,13 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
         if priorities[key][0]
         for term in _LEXICAL_TERMS.findall(name.casefold())
     }
+    topical_question = folded_question
+    for name in document_names.values():
+        topical_question = re.sub(_document_name_pattern(name), " ", topical_question)
     phrases = _expansion_phrases(folded_question)
     query_counts = Counter(
         _stem(term)
-        for term in _LEXICAL_TERMS.findall(folded_question)
+        for term in _LEXICAL_TERMS.findall(topical_question)
         if term not in _QUERY_NOISE and not _YEAR.fullmatch(term) and _stem(term) not in identity_terms
     )
     literal_weights = {term: 1.0 + math.log(count) for term, count in query_counts.items()}
@@ -804,7 +960,7 @@ def _primary_statement_pages(
                 -row_count,
                 "consolidated" not in match[0],
                 bool(year) and year not in body,
-                not _matches_document_name(page.document_id, body),
+                re.search(_document_name_pattern(page.document_id), body) is None,
             )
             candidates.append((quality, page))
         candidates.sort(key=lambda candidate: candidate[0])
@@ -848,13 +1004,12 @@ def _select_evidence_pages(
     return tuple(page.citation for page in ordered if page.source_id in selected_ids)
 
 
-def _matches_document_name(document_id: str, question: str) -> bool:
+def _document_name_pattern(document_id: str) -> str:
     # Finance document identifiers commonly append a year and filing type.
     # The name before that suffix is useful even on tables without a company heading.
     name = re.split(r"[_\s-](?=(?:19|20)\d{2}(?:\D|$))", document_id.casefold(), maxsplit=1)[0]
     compact_name = re.sub(r"[^a-z0-9]", "", name)
-    pattern = r"\b" + r"[\W_]*".join(compact_name) + r"\b"
-    return len(compact_name) >= 2 and re.search(pattern, question) is not None
+    return r"\b" + r"[\W_]*".join(compact_name) + r"\b" if len(compact_name) >= 2 else r"(?!)"
 
 
 def _lexical_score(

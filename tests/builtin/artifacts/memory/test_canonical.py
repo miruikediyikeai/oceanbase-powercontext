@@ -141,6 +141,16 @@ def test_retrieval_query_is_not_held_to_the_entry_body_byte_bound() -> None:
         normalize_query("   ")
 
 
+def test_complete_pdf_evidence_can_exceed_the_ordinary_body_budget() -> None:
+    text = "界" * 4000
+    reference = {"source_type": "pdf-page", "source_id": "page-1"}
+    assert normalize_text(text, source_refs=(reference,)) == text
+    assert len(entry_content_hash(kind="source-evidence", text=text, source_refs=(reference,), artifact_refs=())) == 64
+    for refs in ((), ({"source_type": "content", "source_id": "note"},), (reference, {"source_type": "content"})):
+        with pytest.raises(ValueError, match="8192 UTF-8 bytes"):
+            entry_content_bytes(kind="fact", text=text, source_refs=refs, artifact_refs=())
+
+
 def test_embedding_validation_rejects_wrong_or_non_finite_vectors() -> None:
     assert validate_embedding((1, 2.5, -3), dimension=3) == (1.0, 2.5, -3.0)
     with pytest.raises(ValueError, match="3 dimensions"):

@@ -34,6 +34,7 @@ from pypdf.generic import (
     NullObject,
     NumberObject,
     StreamObject,
+    TextStringObject,
 )
 
 from powercontext.sources import SourceDefinitionRegistry, SourceMaterialization, project_source_for_transport
@@ -84,6 +85,61 @@ def test_extract_all_physical_pages_with_numbers_and_permissions(password):
     ]
     assert all(page.document_id == "sample" for page in pages)
     assert all(page.document_sha256 == hashlib.sha256(raw).hexdigest() for page in pages)
+
+
+@pytest.mark.parametrize("named_property", [False, True])
+def test_actual_text_restores_missing_font_characters_and_preserves_repeated_numbers(named_property):
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Participants 1000 1000"))))
+    page = writer.pages[0]
+    resources = cast(DictionaryObject, page["/Resources"])
+    font = cast(DictionaryObject, cast(DictionaryObject, resources["/Font"])["/F1"])
+    mapping = DecodedStreamObject()
+    mapping.set_data(b"begincmap\n1 beginbfchar\n<00> <0000>\nendbfchar\nendcmap")
+    font[NameObject("/ToUnicode")] = writer._add_object(mapping)
+    properties = DictionaryObject({NameObject("/ActualText"): TextStringObject("ti")})
+    if named_property:
+        resources[NameObject("/Properties")] = DictionaryObject({NameObject("/Replacement"): properties})
+    marked = b"/Replacement" if named_property else b"<< /ActualText (ti) >>"
+    stream = DecodedStreamObject()
+    stream.set_data(b"BT /F1 12 Tf 20 700 Td (Par) Tj /Span " + marked + b" BDC <00> Tj EMC (cipants 1000 1000) Tj ET")
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    parsed = parse_pdf_document(PDFDocumentInput(document_id="actual-text", content=buffer.getvalue()))
+    assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == Counter({"participants": 1, "1000": 2})
+
+
+def test_geometric_extraction_repairs_midword_line_breaks_without_changing_table_numbers():
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Revenue 1000 1000"))))
+    page = writer.pages[0]
+    stream = DecodedStreamObject()
+    # TJ adjustments affect pypdf's line-break inference although the following
+    # text object explicitly restores the same baseline and adjacent position.
+    stream.set_data(
+        b"BT /F1 12 Tf 1 0 0 1 20 700 Tm [(Consolida) 0 -10000] TJ 0 30 Td ET\n"
+        b"BT /F1 12 Tf 1 0 0 1 72 700 Tm (ted) Tj ET\n"
+        b"BT /F1 12 Tf 1 0 0 1 20 680 Tm (Revenue 1000 1000 2022 2021 2020 234 456 678 891 102 982) Tj ET"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    parsed = parse_pdf_document(PDFDocumentInput(document_id="line-break", content=buffer.getvalue()))
+    assert "Consolidated" in parsed[0].text
+    assert Counter(re.findall(r"\d+", parsed[0].text)) == Counter([
+        "1000",
+        "1000",
+        "2022",
+        "2021",
+        "2020",
+        "234",
+        "456",
+        "678",
+        "891",
+        "102",
+        "982",
+    ])
 
 
 def test_positioned_glyphs_preserve_extracted_tokens_and_repeated_values():
@@ -363,7 +419,8 @@ def test_text_in_form_resources_is_preserved_or_fails_atomically(damaged):
 
 
 @pytest.mark.parametrize("damaged", [False, True])
-def test_compressed_font_character_maps_preserve_unicode_or_fail_atomically(damaged):
+@pytest.mark.parametrize(("unicode_hex", "expected"), [("8425", "营"), ("FB01", "fi")])
+def test_compressed_font_character_maps_preserve_unicode_or_fail_atomically(damaged, unicode_hex, expected):
     writer = PdfWriter()
     writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("first page", "A 2000"))))
     page = writer.pages[-1]
@@ -373,7 +430,7 @@ def test_compressed_font_character_maps_preserve_unicode_or_fail_atomically(dama
     mapping = DecodedStreamObject()
     mapping.set_data(
         b"begincmap\n1 begincodespacerange\n<00> <FF>\nendcodespacerange\n"
-        b"1 beginbfchar\n<41> <8425>\nendbfchar\nendcmap"
+        + f"1 beginbfchar\n<41> <{unicode_hex}>\nendbfchar\nendcmap".encode("ascii")
     )
     compressed = mapping.flate_encode()
     if damaged:
@@ -386,4 +443,4 @@ def test_compressed_font_character_maps_preserve_unicode_or_fail_atomically(dama
         with pytest.raises(ValueError):
             parse_pdf_document(document)
     else:
-        assert [page.text for page in parse_pdf_document(document)] == ["first page", "营 2000"]
+        assert [page.text for page in parse_pdf_document(document)] == ["first page", f"{expected} 2000"]

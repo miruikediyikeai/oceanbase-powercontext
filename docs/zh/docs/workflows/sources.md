@@ -39,8 +39,9 @@ Source 读写受所选 [Scope 与访问策略](scopes-and-access.md)约束。
 每页携带整个 PDF 的 SHA-256。可使用空密码读取的权限 PDF 属于合法输入；无效、截断或需要密码的
 文件以 `ValueError` 整体失败，不返回部分页面。文本提取保留页边界，不执行 OCR。
 接受文档前会核对页树计数及 Flate 压缩流完整性，检查范围包括表单资源和字体字符映射中的文本流。
-采集正文保留 pypdf 的提取结果，不将逐字符定位绘制的文字重新拼接成单词或数字。
-字符完整并不等同于验收正则分词后的词项数不变。
+字体将字形映射为 NUL 时，可使用 PDF 内无歧义的单字形 `/ActualText` 标记恢复 Unicode 映射。
+标准 Unicode 连字会解码为对应字母序列。
+几何提取仅在全部非空白字符和数字词项均保持完整、总词项数变化不超过普通提取的 10% 时修复断词。
 保留 pypdf 能提取的全部文字，包括裁剪路径中的文字和表格中的重复数值，不按视觉裁剪结果删除采集内容。
 
 使用包含 `PDF_PAGE_SOURCE_DEFINITION` 的 `SourceDefinitionRegistry` 逐页 resolve，
@@ -53,6 +54,8 @@ Source 读写受所选 [Scope 与访问策略](scopes-and-access.md)约束。
 
 配置 pipeline，将每页投影保存为带有该 Source 引用的独立 Memory 条目。处理完成后，调用
 `await search_pdf_pages(runtime.memory.for_scope(scope_id), question, limit=20)`。
+Source 引用全部来自 PDF 页面的正文允许超过普通 Memory 条目的 8192 字节限制，
+保证完整页面在内容哈希、持久化、重启读回和索引重建中保持一致。
 结果为不同页面的精确 `MemoryCitation` 元组；可通过
 `memory.get(GetMemoryEntryRequest(citation=citation))` 回查，关闭并重新打开 Runtime 后仍然有效。
 非正上限或空白问题返回空元组，其他 Source 类型不会出现在结果中。

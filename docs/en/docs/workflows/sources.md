@@ -42,8 +42,10 @@ PDFs readable with an empty password are accepted; invalid, truncated, or passwo
 raise `ValueError` without returning partial pages. Text extraction preserves page boundaries and does
 not perform OCR. The parser checks page-tree counts and Flate stream integrity, including text in
 form resources and font character maps, before accepting the document.
-Captured text uses pypdf's extraction output without joining individually positioned glyphs into words
-or numbers. Preserving characters alone does not preserve the regex token counts used for validation.
+When a font maps a glyph to NUL, unambiguous single-glyph `/ActualText` spans can restore its Unicode
+mapping. Standard Unicode presentation ligatures are decoded to their letter sequences.
+Geometric extraction can repair split words only when all non-whitespace characters and
+numeric tokens are preserved and the total token count stays within 10% of ordinary extraction.
 All text extractable by pypdf is retained, including text drawn under clipping paths and repeated
 table values. Visual clipping is not used to delete captured content.
 
@@ -57,6 +59,8 @@ retaining the original ID in the captured page and metadata. Existing short Sour
 their spelling.
 
 Use a pipeline that writes each page projection as a separate Memory entry with that Source reference.
+Bodies whose Source references are exclusively PDF pages can exceed the ordinary 8192-byte Memory
+entry budget, preserving complete pages through hashing, persistence, reopening, and index rebuilds.
 After processing, call `await search_pdf_pages(runtime.memory.for_scope(scope_id), question, limit=20)`.
 The result is a tuple of exact `MemoryCitation` values for distinct pages, which can be read through
 `memory.get(GetMemoryEntryRequest(citation=citation))`, including after reopening Runtime. Nonpositive
