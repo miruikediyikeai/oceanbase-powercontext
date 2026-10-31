@@ -40,6 +40,8 @@ Source 读写受所选 [Scope 与访问策略](scopes-and-access.md)约束。
 文件以 `ValueError` 整体失败，不返回部分页面。文本提取保留页边界，不执行 OCR。
 接受文档前会核对页树计数及 Flate 压缩流完整性，检查范围包括表单资源和字体字符映射中的文本流。
 逐字符定位绘制的文字使用布局提取中匹配的字符序列恢复单词和数字间距，页面中的图表标签、旋转文字等其他文本完整保留。
+存在明确裁剪路径时，仅在完整字体边界及所有参与绘制的位置均能证明文字位于裁剪区域之外时排除该文字。
+位置、字体度量或表单坐标无法确定时保留原文，避免完全被裁剪的重复段落混入正文，同时保留表格中合法的重复数值。
 
 使用包含 `PDF_PAGE_SOURCE_DEFINITION` 的 `SourceDefinitionRegistry` 逐页 resolve，
 再通过 `project_source_for_transport` 生成 observation，并经 Runtime ingestion 提交。

@@ -44,6 +44,10 @@ not perform OCR. The parser checks page-tree counts and Flate stream integrity, 
 form resources and font character maps, before accepting the document.
 For individually positioned glyphs, matching character sequences from layout extraction restore word
 and number spacing. All other text, including chart labels and rotated text, stays in the page.
+Explicit clipping paths exclude text only when its complete font bounds and every contributing
+text position prove it lies outside the clipping region. Ambiguous positions, font metrics, and form
+coordinates retain their text. This prevents wholly clipped duplicate paragraphs from inflating the
+page body without deduplicating legitimate repeated table values.
 
 Resolve each returned page with a `SourceDefinitionRegistry` containing `PDF_PAGE_SOURCE_DEFINITION`,
 then submit its `project_source_for_transport` observation through Runtime ingestion. Register

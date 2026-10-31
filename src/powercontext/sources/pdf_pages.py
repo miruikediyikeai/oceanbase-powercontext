@@ -45,6 +45,7 @@ from powercontext.builtin.artifacts.search import analyze_text
 from powercontext.builtin.runtime import GetMemoryEntryRequest, MemoryEntryRecord, SearchMemoryRequest
 from powercontext.limits import MAX_SOURCE_ID_LENGTH
 from powercontext.sources import TEXT_EVIDENCE_PROJECTION_KEY, AdapterSourceDefinition, TextEvidence
+from powercontext.sources._pdf_text import extract_page_body
 from powercontext.sources.models import Source, SourceMaterialization
 
 PDF_PAGE_SOURCE_NAME = "pdf-page"
@@ -368,7 +369,7 @@ def _extract_page_text(page: PageObject, validated: set[int]) -> str:
     resources = page.get("/Resources")
     if resources is not None:
         _validate_text_resources(resources.get_object(), validated)
-    text = page.extract_text() or ""
+    text = extract_page_body(page)
     fragmented = _fragmented_glyph_count(text)
     if not fragmented:
         return text

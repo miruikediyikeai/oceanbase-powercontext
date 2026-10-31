@@ -117,6 +117,93 @@ def test_positioned_glyphs_preserve_words_years_and_repeated_table_values():
     assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == expected
 
 
+@pytest.mark.parametrize("path", ["0 0 600 100 re", "0 0 m 600 0 l 600 100 l 0 100 l h"])
+@pytest.mark.parametrize("transform", ["", "0.5 0 0 0.5 100 100 cm"])
+def test_fully_clipped_text_does_not_duplicate_page_body(path, transform):
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("", "Revenue 1000"))))
+    page = writer.pages[-1]
+    resources = cast(DictionaryObject, page["/Resources"])
+    fonts = cast(DictionaryObject, resources["/Font"])
+    font = cast(DictionaryObject, fonts["/F1"])
+    font[NameObject("/FontDescriptor")] = DictionaryObject({
+        NameObject("/Type"): NameObject("/FontDescriptor"),
+        NameObject("/FontName"): NameObject("/Helvetica"),
+        NameObject("/FontBBox"): ArrayObject([NumberObject(n) for n in (-170, -225, 1000, 931)]),
+    })
+    stream = DecodedStreamObject()
+    stream.set_data(
+        (
+            f"q {transform}\nBT /F1 12 Tf 20 700 Td (Revenue 1000) Tj ET\n"
+            f"q {path} W n\nBT /F1 12 Tf 20 650 Td (Clipped duplicate revenue 1000) Tj ET Q\n"
+            "BT /F1 12 Tf 20 600 Td (Revenue 1000) Tj ET Q"
+        ).encode("ascii")
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="clipped", content=buffer.getvalue()))
+    assert [page.page_number for page in pages] == [1, 2]
+    assert pages[0].text == ""
+    assert Counter(re.findall(r"[a-z]+|\d+", pages[1].text.lower())) == Counter({"revenue": 2, "1000": 2})
+
+
+def test_clipping_preserves_visible_buffered_raised_and_rotated_text():
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Visible 1000"))))
+    page = writer.pages[0]
+    resources = cast(DictionaryObject, page["/Resources"])
+    fonts = cast(DictionaryObject, resources["/Font"])
+    font = cast(DictionaryObject, fonts["/F1"])
+    font[NameObject("/FontDescriptor")] = DictionaryObject({
+        NameObject("/FontBBox"): ArrayObject([NumberObject(n) for n in (-170, -225, 1000, 931)]),
+    })
+    stream = DecodedStreamObject()
+    stream.set_data(
+        b"q 0 0 600 800 re W n BT /F1 12 Tf 20 700 Td (Visible 1000) Tj "
+        b"q 0 0 600 100 re W n (Clipped) Tj Q ET Q\n"
+        b"q 0 500 600 300 re W n BT /F1 12 Tf 20 100 Td 600 Ts (Raised 2000) Tj ET Q\n"
+        b"q 0 0 600 800 re W n BT /F1 12 Tf 0 1 -1 0 400 100 Tm (Rotated 3000) Tj ET Q"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="visible", content=buffer.getvalue()))
+    counts = Counter(re.findall(r"[a-z]+|\d+", pages[0].text.lower()))
+    assert counts >= Counter({"visible": 1, "1000": 1, "raised": 1, "2000": 1, "rotated": 1, "3000": 1})
+
+
+def test_text_in_an_empty_clipping_region_still_produces_a_blank_physical_page():
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Clipped", ""))))
+    stream = DecodedStreamObject()
+    stream.set_data(b"q 0 0 0 0 re W n BT /F1 12 Tf 20 700 Td (Clipped) Tj ET Q")
+    writer.pages[0][NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="empty-clip", content=buffer.getvalue()))
+    assert [(page.page_number, page.text) for page in pages] == [(1, ""), (2, "")]
+
+
+@pytest.mark.parametrize("show_text", ["(Shifted 1000) '", '0 0 (Shifted 1000) "'])
+def test_clipping_preserves_text_moved_into_view_by_next_line_operator(show_text):
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Shifted 1000"))))
+    page = writer.pages[0]
+    resources = cast(DictionaryObject, page["/Resources"])
+    font = cast(DictionaryObject, cast(DictionaryObject, resources["/Font"])["/F1"])
+    font[NameObject("/FontDescriptor")] = DictionaryObject({
+        NameObject("/FontBBox"): ArrayObject([NumberObject(n) for n in (-170, -225, 1000, 931)]),
+    })
+    stream = DecodedStreamObject()
+    stream.set_data(f"q 0 0 600 200 re W n BT /F1 12 Tf 600 TL 20 700 Td {show_text} ET Q".encode("ascii"))
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="next-line", content=buffer.getvalue()))
+    assert "Shifted 1000" in pages[0].text
+
+
 @pytest.mark.parametrize("raw", [b"", b"not a PDF", b"%PDF-1.7\ntruncated"])
 def test_invalid_documents_raise_value_error(raw):
     with pytest.raises(ValueError):
