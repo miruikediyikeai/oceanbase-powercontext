@@ -56,6 +56,7 @@ Source 读写受所选 [Scope 与访问策略](scopes-and-access.md)约束。
 `await search_pdf_pages(runtime.memory.for_scope(scope_id), question, limit=20)`。
 Source 引用全部来自 PDF 页面的正文允许超过普通 Memory 条目的 8192 字节限制，
 保证完整页面在内容哈希、持久化、重启读回和索引重建中保持一致。
+这类正文保留 Unicode 的原始编码形式，避免不透明文档 ID 与已采集投影不一致；内容哈希继续使用规范 JSON 编码。
 结果为不同页面的精确 `MemoryCitation` 元组；可通过
 `memory.get(GetMemoryEntryRequest(citation=citation))` 回查，关闭并重新打开 Runtime 后仍然有效。
 非正上限或空白问题返回空元组，其他 Source 类型不会出现在结果中。

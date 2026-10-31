@@ -61,6 +61,8 @@ their spelling.
 Use a pipeline that writes each page projection as a separate Memory entry with that Source reference.
 Bodies whose Source references are exclusively PDF pages can exceed the ordinary 8192-byte Memory
 entry budget, preserving complete pages through hashing, persistence, reopening, and index rebuilds.
+Their stored bodies preserve Unicode spelling so opaque document IDs still match the captured projections;
+content hashes retain the canonical JSON encoding.
 After processing, call `await search_pdf_pages(runtime.memory.for_scope(scope_id), question, limit=20)`.
 The result is a tuple of exact `MemoryCitation` values for distinct pages, which can be read through
 `memory.get(GetMemoryEntryRequest(citation=citation))`, including after reopening Runtime. Nonpositive

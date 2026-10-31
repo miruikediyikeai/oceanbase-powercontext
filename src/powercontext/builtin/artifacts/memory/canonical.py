@@ -90,7 +90,11 @@ def normalize_text(value: str, *, source_refs: Sequence[object] = ()) -> str:
     pdf_evidence = bool(source_refs) and all(
         isinstance(ref, Mapping) and ref.get("source_type") == "pdf-page" for ref in source_refs
     )
-    if not pdf_evidence and len(normalized.encode("utf-8")) > 8192:
+    if pdf_evidence:
+        # A page projection embeds the caller's opaque document ID. NFC would
+        # change a valid ID or captured text and break exact evidence readback.
+        return value.strip()
+    if len(normalized.encode("utf-8")) > 8192:
         raise _CanonicalValueError("text-too-long")
     return normalized
 

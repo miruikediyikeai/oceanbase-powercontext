@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import unicodedata
 
 import pytest
 
@@ -161,7 +162,9 @@ def test_complete_large_page_survives_ingestion_restart_and_exact_citation(tmp_p
         config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'large-page.db'}"))
         registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
         text = "Revenue and operating expenses 2022 1000 1000. " * 400
-        document = PDFDocumentInput(document_id="ACME_2022_10K", content=make_pdf(text, ""))
+        document = PDFDocumentInput(
+            document_id=unicodedata.normalize("NFD", "ACME_2022_10K_Café"), content=make_pdf(text, "")
+        )
         pages = parse_pdf_document(document)
         assert len(pages[0].text.encode("utf-8")) > 8192
         observations = [project_source_for_transport(registry, await registry.resolve(page)) for page in pages]

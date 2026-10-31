@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import math
+import unicodedata
 
 import pytest
 
@@ -145,6 +146,9 @@ def test_complete_pdf_evidence_can_exceed_the_ordinary_body_budget() -> None:
     text = "界" * 4000
     reference = {"source_type": "pdf-page", "source_id": "page-1"}
     assert normalize_text(text, source_refs=(reference,)) == text
+    decomposed = unicodedata.normalize("NFD", "Café")
+    assert normalize_text(decomposed, source_refs=(reference,)) == decomposed
+    assert normalize_text(decomposed) == "Café"
     assert len(entry_content_hash(kind="source-evidence", text=text, source_refs=(reference,), artifact_refs=())) == 64
     for refs in ((), ({"source_type": "content", "source_id": "note"},), (reference, {"source_type": "content"})):
         with pytest.raises(ValueError, match="8192 UTF-8 bytes"):
