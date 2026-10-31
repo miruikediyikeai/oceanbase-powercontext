@@ -110,7 +110,8 @@ def test_actual_text_restores_missing_font_characters_and_preserves_repeated_num
     assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == Counter({"participants": 1, "1000": 2})
 
 
-def test_geometric_extraction_repairs_midword_line_breaks_without_changing_table_numbers():
+@pytest.mark.parametrize("numbers", ["1000 1000", "1000 1000 2022 2021 2020 234 456 678 891 102 982"])
+def test_geometric_extraction_repairs_midword_line_breaks_without_changing_table_numbers(numbers):
     writer = PdfWriter()
     writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Revenue 1000 1000"))))
     page = writer.pages[0]
@@ -120,29 +121,17 @@ def test_geometric_extraction_repairs_midword_line_breaks_without_changing_table
     stream.set_data(
         b"BT /F1 12 Tf 1 0 0 1 20 700 Tm [(Consolida) 0 -10000] TJ 0 30 Td ET\n"
         b"BT /F1 12 Tf 1 0 0 1 72 700 Tm (ted) Tj ET\n"
-        b"BT /F1 12 Tf 1 0 0 1 20 680 Tm (Revenue 1000 1000 2022 2021 2020 234 456 678 891 102 982) Tj ET"
+        b"BT /F1 12 Tf 1 0 0 1 20 680 Tm (Revenue " + numbers.encode("ascii") + b") Tj ET"
     )
     page[NameObject("/Contents")] = writer._add_object(stream)
     buffer = io.BytesIO()
     writer.write(buffer)
     parsed = parse_pdf_document(PDFDocumentInput(document_id="line-break", content=buffer.getvalue()))
     assert "Consolidated" in parsed[0].text
-    assert Counter(re.findall(r"\d+", parsed[0].text)) == Counter([
-        "1000",
-        "1000",
-        "2022",
-        "2021",
-        "2020",
-        "234",
-        "456",
-        "678",
-        "891",
-        "102",
-        "982",
-    ])
+    assert Counter(re.findall(r"\d+", parsed[0].text)) == Counter(numbers.split())
 
 
-def test_positioned_glyphs_preserve_extracted_tokens_and_repeated_values():
+def test_positioned_glyphs_preserve_words_and_repeated_values():
     writer = PdfWriter()
     page = writer.add_blank_page(width=600, height=800)
     font = DictionaryObject({
@@ -170,12 +159,35 @@ def test_positioned_glyphs_preserve_extracted_tokens_and_repeated_values():
     writer.write(buffer)
     raw = buffer.getvalue()
     parsed = parse_pdf_document(PDFDocumentInput(document_id="positioned", content=raw))
-    native_text = PdfReader(io.BytesIO(raw), strict=True).pages[0].extract_text() or ""
-    expected = Counter(re.findall(r"[a-z]+|\d+", native_text.lower()))
+    expected = Counter(re.findall(r"[a-z]+|\d+", ("\n".join(lines) + "\nRotated label").lower()))
     assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == expected
     assert Counter(character for character in parsed[0].text if not character.isspace()) == Counter(
         character for character in "\n".join(lines) + "\nRotated label" if not character.isspace()
     )
+
+
+def test_geometric_word_repair_preserves_overlapping_table_labels():
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("labels"))))
+    page = writer.pages[0]
+    stream = DecodedStreamObject()
+    stream.set_data(
+        b"BT /F1 12 Tf 20 750 Td (Asset Category Total) Tj ET\n"
+        b"BT /F1 12 Tf 20 720 Td (Asset Category Total ) Tj ET\n"
+        b"BT /F1 12 Tf 20 720 Td (Asset Category Total ) Tj ET\n"
+        b"BT /F1 12 Tf 1 0 0 1 20 680 Tm [(Consolida) 0 -10000] TJ 0 30 Td ET\n"
+        b"BT /F1 12 Tf 1 0 0 1 72 680 Tm (ted) Tj ET"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    parsed = parse_pdf_document(PDFDocumentInput(document_id="labels", content=buffer.getvalue()))
+    assert Counter(re.findall(r"[a-z]+", parsed[0].text.lower())) == Counter({
+        "asset": 3,
+        "category": 3,
+        "total": 3,
+        "consolidated": 1,
+    })
 
 
 @pytest.mark.parametrize("path", ["0 0 600 100 re", "0 0 m 600 0 l 600 100 l 0 100 l h"])

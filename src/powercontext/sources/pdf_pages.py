@@ -514,21 +514,21 @@ def _actual_text_glyphs(contents: ContentStream, properties: DictionaryObject) -
 
 
 def _recover_word_boundaries(page: PageObject, plain: str) -> str:
-    fragments = tuple(
-        (left, right)
-        for left, right in re.findall(r"(?=\b([A-Za-z]+)\s+([A-Za-z]+)\b)", plain)
-        if min(len(left), len(right)) <= 3
-    )
+    fragments = tuple((left, right) for left, right in re.findall(r"(?=\b([A-Za-z]+)\s+([A-Za-z]+)\b)", plain))
     if not fragments:
         return plain
     layout = (page.extract_text(extraction_mode="layout", layout_mode_strip_rotated=False) or "").translate(
         _TEXT_LIGATURES
     )
-    # Never lose rotated labels, repeated table amounts or any non-whitespace
-    # character. Layout is useful only when it actually resolves a split word.
+    # Never lose rotated labels or any non-whitespace character when changing
+    # word and number boundaries using positions instead of drawing order.
     if Counter(c for c in plain if not c.isspace()) != Counter(c for c in layout if not c.isspace()):
         return plain
-    if Counter(re.findall(r"\d+", plain)) != Counter(re.findall(r"\d+", layout)):
+    original_numbers = Counter(re.findall(r"\d+", plain))
+    layout_numbers = Counter(re.findall(r"\d+", layout))
+    # Already complete amounts and years must survive, including repetitions.
+    # One/two-digit fragments may themselves be broken parts of a larger number.
+    if any(layout_numbers[number] < count for number, count in original_numbers.items() if len(number) >= 3):
         return plain
     before = Counter(_LEXICAL_TERMS.findall(plain.lower()))
     for left, right in fragments:
@@ -539,12 +539,35 @@ def _recover_word_boundaries(page: PageObject, plain: str) -> str:
             # Layout occasionally joins separate labels at the ends of lines.
             # Preserve their spaces unless the combined word occurs in the PDF.
             layout = re.sub(r"\b" + re.escape(word) + r"\b", left + " " + right, layout)
+    layout = _separate_joined_labels(layout, before)
     after = Counter(_LEXICAL_TERMS.findall(layout.lower()))
-    if not 0.9 * before.total() <= after.total() <= 1.1 * before.total():
-        return plain
-    if not any(after[(left + right).lower()] > before[(left + right).lower()] for left, right in fragments):
+    if after == before:
         return plain
     return "\n".join(" ".join(line.split()) for line in layout.splitlines()).strip()
+
+
+def _separate_joined_labels(layout: str, original_words: Counter[str]) -> str:
+    """Keep table labels separate when layout coalesces adjacent text blocks.
+
+    Only words that are independently present in both extractions are trusted.
+    This avoids treating the broken fragments being repaired as complete words.
+    """
+    layout_words = set(_LEXICAL_TERMS.findall(layout.lower()))
+    known = {word for word in original_words.keys() & layout_words if len(word) >= 3 and word.isalpha()}
+    if not known:
+        return layout
+    parts = re.compile("|".join(re.escape(word) for word in sorted(known, key=len, reverse=True)), re.IGNORECASE)
+
+    def separate(match: re.Match[str]) -> str:
+        word = match[0]
+        if word.lower() in original_words or not any(character.isupper() for character in word[1:]):
+            return word
+        words = parts.findall(word)
+        if len(words) > 1 and "".join(words) == word:
+            return " ".join(words)
+        return word
+
+    return re.sub(r"\b[A-Za-z]+\b", separate, layout)
 
 
 def _validate_text_stream(stream: StreamObject, validated: set[int]) -> None:

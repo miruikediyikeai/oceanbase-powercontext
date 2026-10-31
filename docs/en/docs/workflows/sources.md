@@ -44,8 +44,9 @@ not perform OCR. The parser checks page-tree counts and Flate stream integrity, 
 form resources and font character maps, before accepting the document.
 When a font maps a glyph to NUL, unambiguous single-glyph `/ActualText` spans can restore its Unicode
 mapping. Standard Unicode presentation ligatures are decoded to their letter sequences.
-Geometric extraction can repair split words only when all non-whitespace characters and
-numeric tokens are preserved and the total token count stays within 10% of ordinary extraction.
+Geometric extraction repairs split words and numbers while preserving every non-whitespace character
+and all already complete amounts and years, including repetitions. Ordinary extraction's token count
+is not a quality reference: positioned glyphs can split one printed word into many tokens.
 All text extractable by pypdf is retained, including text drawn under clipping paths and repeated
 table values. Visual clipping is not used to delete captured content.
 
