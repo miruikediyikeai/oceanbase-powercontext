@@ -49,6 +49,10 @@ Geometric extraction repairs split words and numbers while preserving every non-
 and its repetitions. This also separates chart labels drawn in reverse order that ordinary extraction
 can concatenate into one number. Ordinary extraction's token count is not a quality reference:
 positioned glyphs can split one printed word into many tokens.
+Words repeated in the complete input document help recover letter-spaced labels and residual word
+fragments. Joining fragments also requires a missing complete word in the same page's decoded
+text-show strings; explicit spaces inside those strings are preserved. This recovery changes only
+whitespace and does not move content across pages or use an external vocabulary.
 All text extractable by pypdf is retained, including text drawn under clipping paths and repeated
 table values. Visual clipping is not used to delete captured content.
 

@@ -31,6 +31,8 @@ from urllib.parse import quote
 
 from pydantic import BaseModel, Field, field_validator
 from pypdf import PageObject, PdfReader
+from pypdf._font import Font
+from pypdf._text_extraction._layout_mode._text_state_params import TextStateParams
 from pypdf.generic import (
     ArrayObject,
     ContentStream,
@@ -193,6 +195,8 @@ _NEIGHBOR_BONUS = 6.0
 _PRECISE_PHRASE_LIMIT = 6
 _AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 _LEXICAL_TERMS = re.compile(r"[a-z]+|\d+")
+_WORD = re.compile(r"[A-Za-z]+")
+_SPACED_LETTERS = re.compile(r"(?<!\w)(?:[A-Za-z][ \t]+){3,}[A-Za-z](?!\w)")
 _TEXT_LIGATURES = str.maketrans({"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"})
 _WORD_PARTICLES = frozenset({
     "a",
@@ -365,6 +369,7 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
         pages = _document_pages(reader)
         validated: set[int] = set()
         extracted = tuple((index, _extract_page_text(page, validated)) for index, page in enumerate(pages, start=1))
+        extracted = _recover_document_words(pages, extracted)
     except Exception as error:
         # pypdf can also raise codec, decompression and recursion errors when a
         # later page is damaged. None may escape as a partially accepted PDF.
@@ -379,6 +384,148 @@ def parse_pdf_document(value: PDFDocumentInput) -> tuple[PDFPageInput, ...]:
             text=text,
         )
         for page_number, text in extracted
+    )
+
+
+def _recover_document_words(
+    pages: tuple[PageObject, ...], extracted: tuple[tuple[int, str], ...]
+) -> tuple[tuple[int, str], ...]:
+    # Learn only from the complete input PDF. No dictionary or report-specific
+    # vocabulary is needed, and every change stays within its physical page.
+    vocabulary = Counter(word.lower() for _, text in extracted for word in _WORD.findall(text))
+    if not vocabulary:
+        return extracted
+    return tuple(
+        (number, _join_word_fragments(page, _join_spaced_letters(text, vocabulary), vocabulary))
+        for page, (number, text) in zip(pages, extracted, strict=True)
+    )
+
+
+def _join_spaced_letters(text: str, vocabulary: Counter[str]) -> str:
+    total = vocabulary.total()
+
+    def join(match: re.Match[str]) -> str:
+        letters = "".join(match[0].split())
+        # Capital initials can be independent table labels. Long sequences
+        # are also too ambiguous to repair as a single run.
+        if letters.isupper() or len(letters) > 256:
+            return match[0]
+        best: list[tuple[float, tuple[str, ...]] | None] = [None] * (len(letters) + 1)
+        best[0] = (0.0, ())
+        for start in range(len(letters)):
+            previous = best[start]
+            if previous is None:
+                continue
+            for end in range(start + 1, min(len(letters), start + 35) + 1):
+                word = letters[start:end]
+                count = vocabulary[word.lower()]
+                if count < 3 or (len(word) == 1 and word.lower() not in {"a", "i"}):
+                    continue
+                score = previous[0] + math.log(count / total)
+                current = best[end]
+                if current is None or score > current[0]:
+                    best[end] = (score, (*previous[1], word))
+        result = best[-1]
+        return " ".join(result[1]) if result is not None else match[0]
+
+    return _SPACED_LETTERS.sub(join, text)
+
+
+def _join_word_fragments(page: PageObject, text: str, vocabulary: Counter[str]) -> str:
+    literal_words: Counter[str] | None = None
+    for _ in range(3):
+        words = tuple(_WORD.finditer(text))
+        counts = Counter(word[0].lower() for word in words)
+        edits: list[tuple[int, int]] = []
+        previous_end = -1
+        for left, right in pairwise(words):
+            whole = (left[0] + right[0]).lower()
+            if (
+                left.start() < previous_end
+                or not text[left.end() : right.start()].isspace()
+                or {left[0].lower(), right[0].lower()} & _WORD_PARTICLES
+                or (left[0][-1].islower() and right[0][0].isupper())
+                or len(whole) < 5
+                or vocabulary[whole] < 3
+                or vocabulary[whole] <= min(vocabulary[left[0].lower()], vocabulary[right[0].lower()])
+            ):
+                continue
+            if literal_words is None:
+                literal_words = Counter(word.lower() for word in _WORD.findall(_literal_page_text(page)))
+            # Word frequency alone would merge legitimate "ground water" or
+            # "Regulation S". Require a missing complete word in this page's
+            # actual text-show strings, preserving all their explicit spaces.
+            if literal_words[whole] <= counts[whole]:
+                continue
+            edits.append((left.end(), right.start()))
+            counts[whole] += 1
+            previous_end = right.end()
+        if not edits:
+            break
+        for start, end in reversed(edits):
+            text = text[:start] + text[end:]
+    return text
+
+
+def _literal_page_text(page: PageObject) -> str:
+    page = _restore_actual_text_font_maps(page)
+    contents = page.get_contents()
+    resources = page.get("/Resources")
+    if contents is None or resources is None:
+        return ""
+    return _literal_resource_text(contents, resources.get_object(), page.pdf, set(), {})
+
+
+def _literal_resource_text(
+    contents: ContentStream,
+    resources: DictionaryObject,
+    reader,
+    ancestors: set[int],
+    fonts: dict[int, Font],
+) -> str:
+    font_resources = resources.get("/Font", DictionaryObject()).get_object()
+    font: Font | None = None
+    saved_fonts: list[Font | None] = []
+    text: list[str] = []
+    for operands, operator in contents.operations:
+        if operator == b"Tf":
+            resource = font_resources.get(operands[0], DictionaryObject()).get_object()
+            if resource and id(resource) not in fonts:
+                fonts[id(resource)] = Font.from_font_resource(resource)
+            font = fonts.get(id(resource))
+        elif operator == b"q":
+            saved_fonts.append(font)
+        elif operator == b"Q" and saved_fonts:
+            font = saved_fonts.pop()
+        elif operator in (b"Tj", b"TJ", b"'", b'"'):
+            if font is None:
+                text.append(" ")
+                continue
+            for raw in _shown_text_bytes(operands, operator):
+                # Use the locked extractor's glyph decoding, without its
+                # inferred geometric spaces between text-show operations.
+                text.append(TextStateParams(raw, font, 1).text.translate(_TEXT_LIGATURES))
+        elif operator == b"Do":
+            text.append(_literal_form_text(operands[0], resources, reader, ancestors, fonts))
+    return "".join(text)
+
+
+def _literal_form_text(
+    name: str, resources: DictionaryObject, reader, ancestors: set[int], fonts: dict[int, Font]
+) -> str:
+    forms = resources.get("/XObject", DictionaryObject()).get_object()
+    form = forms.get(name)
+    if form is None:
+        return ""
+    form = form.get_object()
+    if not isinstance(form, StreamObject) or form.get("/Subtype") != "/Form" or id(form) in ancestors:
+        return ""
+    return _literal_resource_text(
+        ContentStream(form, reader),
+        form.get("/Resources", resources).get_object(),
+        reader,
+        ancestors | {id(form)},
+        fonts,
     )
 
 

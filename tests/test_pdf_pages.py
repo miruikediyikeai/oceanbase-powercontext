@@ -87,6 +87,62 @@ def test_extract_all_physical_pages_with_numbers_and_permissions(password):
     assert all(page.document_sha256 == hashlib.sha256(raw).hexdigest() for page in pages)
 
 
+@pytest.mark.parametrize("form_depth", [0, 2])
+def test_document_words_recover_inferred_spaces_and_preserve_literal_word_boundaries(form_depth):
+    vocabulary = "Participant Retirement December derivatives groundwater regulations asset ABCD " * 4
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf(vocabulary, "", "placeholder"))))
+    stream = DecodedStreamObject()
+    # The numeric TJ adjustments create inferred spaces inside words. Actual
+    # spaces in the strings remain authoritative, even for common compounds.
+    stream.set_data(
+        b"BT /F1 12 Tf 20 700 Td "
+        b"[(Participan) -300 (t Retir) -300 "
+        b"(ement groundwater groundwater ground water Regulation S as set 1000 1000)] TJ "
+        b"0 -30 Td (D e c e m b e r) Tj "
+        b"0 -30 Td (d e r i v a t i v e s) Tj "
+        b"0 -30 Td (A B C D) Tj ET"
+    )
+    page = writer.pages[-1]
+    resources = page["/Resources"]
+    for _ in range(form_depth):
+        stream[NameObject("/Type")] = NameObject("/XObject")
+        stream[NameObject("/Subtype")] = NameObject("/Form")
+        stream[NameObject("/BBox")] = ArrayObject([NumberObject(n) for n in (0, 0, 600, 800)])
+        stream[NameObject("/Resources")] = resources
+        resources = DictionaryObject({
+            NameObject("/XObject"): DictionaryObject({NameObject("/Form1"): writer._add_object(stream)})
+        })
+        stream = DecodedStreamObject()
+        stream.set_data(b"/Form1 Do")
+    page[NameObject("/Resources")] = resources
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="fragmented", content=buffer.getvalue()))
+    assert len(pages) == 3 and pages[1].text == ""
+    assert Counter(re.findall(r"[a-z]+|\d+", pages[-1].text.lower())) == Counter([
+        "participant",
+        "retirement",
+        "groundwater",
+        "groundwater",
+        "ground",
+        "water",
+        "regulation",
+        "s",
+        "as",
+        "set",
+        "1000",
+        "1000",
+        "december",
+        "derivatives",
+        "a",
+        "b",
+        "c",
+        "d",
+    ])
+
+
 @pytest.mark.parametrize("named_property", [False, True])
 @pytest.mark.parametrize("form_depth", [0, 1, 2])
 def test_actual_text_restores_missing_font_characters_and_preserves_repeated_numbers(named_property, form_depth):
