@@ -88,7 +88,8 @@ def test_extract_all_physical_pages_with_numbers_and_permissions(password):
 
 
 @pytest.mark.parametrize("named_property", [False, True])
-def test_actual_text_restores_missing_font_characters_and_preserves_repeated_numbers(named_property):
+@pytest.mark.parametrize("form_depth", [0, 1, 2])
+def test_actual_text_restores_missing_font_characters_and_preserves_repeated_numbers(named_property, form_depth):
     writer = PdfWriter()
     writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Participants 1000 1000"))))
     page = writer.pages[0]
@@ -103,6 +104,17 @@ def test_actual_text_restores_missing_font_characters_and_preserves_repeated_num
     marked = b"/Replacement" if named_property else b"<< /ActualText (ti) >>"
     stream = DecodedStreamObject()
     stream.set_data(b"BT /F1 12 Tf 20 700 Td (Par) Tj /Span " + marked + b" BDC <00> Tj EMC (cipants 1000 1000) Tj ET")
+    for _ in range(form_depth):
+        stream[NameObject("/Type")] = NameObject("/XObject")
+        stream[NameObject("/Subtype")] = NameObject("/Form")
+        stream[NameObject("/BBox")] = ArrayObject([NumberObject(n) for n in (0, 0, 600, 800)])
+        stream[NameObject("/Resources")] = resources
+        resources = DictionaryObject({
+            NameObject("/XObject"): DictionaryObject({NameObject("/Form1"): writer._add_object(stream)})
+        })
+        stream = DecodedStreamObject()
+        stream.set_data(b"/Form1 Do")
+    page[NameObject("/Resources")] = resources
     page[NameObject("/Contents")] = writer._add_object(stream)
     buffer = io.BytesIO()
     writer.write(buffer)
@@ -164,6 +176,47 @@ def test_positioned_glyphs_preserve_words_and_repeated_values():
     assert Counter(character for character in parsed[0].text if not character.isspace()) == Counter(
         character for character in "\n".join(lines) + "\nRotated label" if not character.isspace()
     )
+
+
+@pytest.mark.parametrize("year", ["2022", "1934", "2026"])
+def test_three_digit_fragments_do_not_prevent_year_recovery(year):
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Fiscal year"))))
+    page = writer.pages[0]
+    fonts = cast(DictionaryObject, cast(DictionaryObject, page["/Resources"])["/Font"])
+    cast(DictionaryObject, fonts["/F1"])[NameObject("/BaseFont")] = NameObject("/Courier")
+    prefix = f"Fiscal year {year[:-1]}"
+    stream = DecodedStreamObject()
+    stream.set_data(
+        (
+            f"BT /F1 12 Tf 1 0 0 1 20 700 Tm [({prefix}) -1000] TJ ET\n"
+            f"BT /F1 12 Tf 1 0 0 1 {20 + len(prefix) * 7.2:.2f} 700 Tm ({year[-1]}) Tj ET\n"
+            "BT /F1 12 Tf 20 680 Td (Revenue 1000 1000) Tj ET"
+        ).encode("ascii")
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="split-year", content=buffer.getvalue()))
+    assert Counter(re.findall(r"\d+", pages[0].text)) == Counter({year: 1, "1000": 2})
+
+
+def test_chart_labels_drawn_in_reverse_order_remain_separate_numbers():
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("Chart labels"))))
+    page = writer.pages[0]
+    stream = DecodedStreamObject()
+    stream.set_data(
+        b"BT /F1 12 Tf 20 750 Td (Chart labels) Tj ET\n"
+        b"BT /F1 12 Tf 300 700 Td (2022) Tj ET\n"
+        b"BT /F1 12 Tf 200 700 Td (2021) Tj ET\n"
+        b"BT /F1 12 Tf 100 700 Td (2020) Tj ET"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    pages = parse_pdf_document(PDFDocumentInput(document_id="chart", content=buffer.getvalue()))
+    assert Counter(re.findall(r"\d+", pages[0].text)) == Counter({"2020": 1, "2021": 1, "2022": 1})
 
 
 def test_geometric_word_repair_preserves_overlapping_table_labels():

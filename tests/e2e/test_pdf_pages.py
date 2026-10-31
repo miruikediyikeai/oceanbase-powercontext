@@ -322,6 +322,56 @@ class SearchOnlyMemory:
         return await self.memory.get(request)
 
 
+def test_ratio_questions_retrieve_every_required_statement_after_restart(tmp_path):
+    async def scenario():
+        discussion = (
+            "Management discusses asset turnover, cash conversion cycle, days sales outstanding, "
+            "and interest coverage ratio in FY2022. Performance measures are reviewed regularly. "
+        )
+        income = (
+            "Consolidated Statements of Income\n2022 2021 2020\n"
+            "Net revenue 9000 8000 7000\nCost of sales 4000 3500 3000\n"
+            "Interest expense 200 190 180\nNet income 1500 1400 1300"
+        )
+        balance = (
+            "Consolidated Balance Sheets\n2022 2021\n"
+            "Cash and cash equivalents 1200 1100\nAccounts receivable 2000 1900\nInventories 900 800\n"
+            "Total assets 9000 8500\nAccounts payable 700 600\nTotal liabilities 4000 3500"
+        )
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'ratios.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        document = PDFDocumentInput(
+            document_id="ACME_2022_10K", content=make_pdf(*(discussion for _ in range(24)), income, balance)
+        )
+        pages = parse_pdf_document(document)
+        observations = [project_source_for_transport(registry, await registry.resolve(page)) for page in pages]
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(ScopeDraft(title="Ratios", summary="tables", idempotency_key="ratios"))
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            for observation in observations:
+                await runtime.ingestion.submit(
+                    SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                )
+            await flush_all(runtime.memory.for_scope(scope.scope_id), len(pages))
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            for metric, required in (
+                ("asset turnover", observations[-2:]),
+                ("cash conversion cycle", observations[-2:]),
+                ("days sales outstanding", observations[-2:]),
+                ("interest coverage ratio", observations[-2:-1]),
+            ):
+                for interface in (memory, SearchOnlyMemory(memory)):
+                    citations = await search_pdf_pages(interface, f"What was ACME's {metric} in FY2022?", limit=20)
+                    records = [await memory.get(GetMemoryEntryRequest(citation=citation)) for citation in citations]
+                    sources = {record.entry.sources[0].source_id for record in records}
+                    assert {observation.name for observation in required} <= sources, metric
+                    assert len(sources) == len(citations) <= 20
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize(
     ("topic", "evidence"),
     [

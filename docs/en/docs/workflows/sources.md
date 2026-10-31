@@ -43,10 +43,12 @@ raise `ValueError` without returning partial pages. Text extraction preserves pa
 not perform OCR. The parser checks page-tree counts and Flate stream integrity, including text in
 form resources and font character maps, before accepting the document.
 When a font maps a glyph to NUL, unambiguous single-glyph `/ActualText` spans can restore its Unicode
-mapping. Standard Unicode presentation ligatures are decoded to their letter sequences.
+mapping, including inside nested Form XObjects. Standard Unicode presentation ligatures are decoded
+to their letter sequences.
 Geometric extraction repairs split words and numbers while preserving every non-whitespace character
-and all already complete amounts and years, including repetitions. Ordinary extraction's token count
-is not a quality reference: positioned glyphs can split one printed word into many tokens.
+and its repetitions. This also separates chart labels drawn in reverse order that ordinary extraction
+can concatenate into one number. Ordinary extraction's token count is not a quality reference:
+positioned glyphs can split one printed word into many tokens.
 All text extractable by pypdf is retained, including text drawn under clipping paths and repeated
 table values. Visual clipping is not used to delete captured content.
 
@@ -77,6 +79,8 @@ identities. For questions about financial statements, a small part of the result
 matching income, cash flow, and balance sheet pages identified by headings and numeric content,
 including adjacent pages marked as continuations. Word inflections and fiscal-year prefixes are
 normalized during scoring.
+Ratio questions can require multiple statements even when their metric names do not appear on the
+tables; for example, cash conversion cycle questions retain income and balance sheet evidence.
 Document IDs may be opaque. When an ID does not identify the company, question terms shared with the
 opening pages provide document context for ranking statements that omit the company name.
 Financial paraphrases map to accounting terms, such as supplier payment obligations to accounts payable

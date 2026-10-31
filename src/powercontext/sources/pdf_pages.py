@@ -98,6 +98,11 @@ _NUMERIC_QUESTION = re.compile(
     r"margin|income|revenue|expense|cost|ebitda|capex|cash flow|earnings|profit|tax|debt|dividend|amount|"
     r"quantity|million|balance sheet|impairment"
 )
+_OPERATING_RATIO_PATTERN = (
+    r"(?:asset|inventory|inventories|receivables?|payables?|working capital) turnover|"
+    r"(?:cash conversion|cash operating|operating) cycle|"
+    r"days (?:sales|receivables?|payables?|inventory|inventories) outstanding|\b(?:dso|dpo|dio)\b"
+)
 _REGION_NAMES = (
     "north america",
     "latin america",
@@ -163,6 +168,11 @@ _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (re.compile(r"free cash|\bfcf\b"), ("free cash flow", "cash flows", "capital expenditure")),
     (re.compile(r"return on assets|\broa\b"), ("net income", "total assets")),
     (re.compile(r"return on equity|\broe\b"), ("net income", "stockholders equity", "shareholders equity")),
+    (
+        re.compile(_OPERATING_RATIO_PATTERN),
+        ("net sales", "cost of sales", "accounts receivable", "inventories", "accounts payable", "total assets"),
+    ),
+    (re.compile(r"interest coverage|times interest earned"), ("operating income", "interest expense")),
     (re.compile(r"earnings per share|\beps\b|dilut\w*.*(?:earnings|shares?)"), ("earnings per share", "antidilutive")),
     (re.compile(r"selling general|\bsg&a\b|\bsga\b"), ("selling general and administrative",)),
     (re.compile(r"research and development|develop\w* new products"), ("research and development",)),
@@ -230,7 +240,10 @@ def _statement_heading(*titles: str) -> re.Pattern[str]:
 # Row concepts distinguish tables from indexes and narrative title references.
 _STATEMENT_INTENTS = (
     (
-        re.compile(r"income|earnings|revenue|sales|margin|profit|ebitda|p&l|tax|cost of|return on|payout|\bro[ae]\b"),
+        re.compile(
+            r"income|earnings|revenue|sales|margin|profit|ebitda|p&l|tax|cost of|return on|payout|\bro[ae]\b|"
+            r"interest coverage|times interest earned|" + _OPERATING_RATIO_PATTERN
+        ),
         _statement_heading(
             "statement of income",
             "statements of income",
@@ -275,7 +288,7 @@ _STATEMENT_INTENTS = (
     (
         re.compile(
             r"balance sheet|financial position|asset|liabilit|equity|debt|working capital|receivable|inventor|"
-            r"(?:current|quick|cash) ratio|leverage|return on|\bro[ae]\b"
+            r"(?:current|quick|cash) ratio|leverage|return on|\bro[ae]\b|" + _OPERATING_RATIO_PATTERN
         ),
         _statement_heading(
             "balance sheet",
@@ -435,11 +448,15 @@ def _restore_actual_text_font_maps(page: PageObject) -> PageObject:
     contents = page.get_contents()
     if resources is None or contents is None:
         return page
-    resources = resources.get_object()
-    fonts = resources.get("/Font")
-    if fonts is None:
-        return page
-    fonts = fonts.get_object()
+    result = copy(page)
+    result[NameObject("/Resources")] = _restore_text_resource_maps(resources.get_object(), contents, page.pdf, set())
+    return result
+
+
+def _restore_text_resource_maps(
+    resources: DictionaryObject, contents: ContentStream, reader, ancestors: set[int]
+) -> DictionaryObject:
+    fonts = resources.get("/Font", DictionaryObject()).get_object()
     properties = resources.get("/Properties", DictionaryObject()).get_object()
     replacements = _actual_text_glyphs(contents, properties)
     patched_fonts = DictionaryObject(fonts)
@@ -465,11 +482,22 @@ def _restore_actual_text_font_maps(page: PageObject) -> PageObject:
             patched_font = DictionaryObject(font)
             patched_font[NameObject("/ToUnicode")] = new_cmap
             patched_fonts[NameObject(name)] = patched_font
-    result = copy(page)
     patched_resources = DictionaryObject(resources)
     patched_resources[NameObject("/Font")] = patched_fonts
-    result[NameObject("/Resources")] = patched_resources
-    return result
+    forms = resources.get("/XObject", DictionaryObject()).get_object()
+    patched_forms = DictionaryObject(forms)
+    for name, value in forms.items():
+        form = value.get_object()
+        if not isinstance(form, StreamObject) or form.get("/Subtype") != "/Form" or id(form) in ancestors:
+            continue
+        form_resources = form.get("/Resources", resources).get_object()
+        patched_form = copy(form)
+        patched_form[NameObject("/Resources")] = _restore_text_resource_maps(
+            form_resources, ContentStream(form, reader), reader, ancestors | {id(form)}
+        )
+        patched_forms[NameObject(name)] = patched_form
+    patched_resources[NameObject("/XObject")] = patched_forms
+    return patched_resources
 
 
 def _actual_text_property(value: object, properties: DictionaryObject) -> str | None:
@@ -525,11 +553,10 @@ def _recover_word_boundaries(page: PageObject, plain: str) -> str:
     if Counter(c for c in plain if not c.isspace()) != Counter(c for c in layout if not c.isspace()):
         return plain
     original_numbers = Counter(re.findall(r"\d+", plain))
-    layout_numbers = Counter(re.findall(r"\d+", layout))
-    # Already complete amounts and years must survive, including repetitions.
-    # One/two-digit fragments may themselves be broken parts of a larger number.
-    if any(layout_numbers[number] < count for number, count in original_numbers.items() if len(number) >= 3):
-        return plain
+    layout = _restore_complete_numbers(layout, original_numbers)
+    # Drawing order can concatenate an entire chart axis into one number just
+    # as it can split a year into several numbers. Numeric token counts cannot
+    # veto geometry; the character multiset above preserves every digit.
     before = Counter(_LEXICAL_TERMS.findall(plain.lower()))
     for left, right in fragments:
         word = left + right
@@ -544,6 +571,26 @@ def _recover_word_boundaries(page: PageObject, plain: str) -> str:
     if after == before:
         return plain
     return "\n".join(" ".join(line.split()) for line in layout.splitlines()).strip()
+
+
+def _restore_complete_numbers(layout: str, original_numbers: Counter[str]) -> str:
+    """Repair layout-only splits without joining amounts across table rows."""
+    layout_numbers = Counter(re.findall(r"\d+", layout))
+    for number, count in original_numbers.items():
+        missing = count - layout_numbers[number]
+        if not 3 <= len(number) <= 4 or missing <= 0:
+            continue
+        pattern = r"(?<!\d)" + r"[ \t]*".join(number) + r"(?!\d)"
+
+        def restore(match: re.Match[str], number: str = number) -> str:
+            nonlocal missing
+            if missing > 0 and match[0] != number:
+                missing -= 1
+                return number
+            return match[0]
+
+        layout = re.sub(pattern, restore, layout)
+    return layout
 
 
 def _separate_joined_labels(layout: str, original_words: Counter[str]) -> str:
