@@ -86,7 +86,7 @@ def test_extract_all_physical_pages_with_numbers_and_permissions(password):
     assert all(page.document_sha256 == hashlib.sha256(raw).hexdigest() for page in pages)
 
 
-def test_positioned_glyphs_preserve_words_years_and_repeated_table_values():
+def test_positioned_glyphs_preserve_extracted_tokens_and_repeated_values():
     writer = PdfWriter()
     page = writer.add_blank_page(width=600, height=800)
     font = DictionaryObject({
@@ -112,9 +112,14 @@ def test_positioned_glyphs_preserve_words_years_and_repeated_table_values():
     page[NameObject("/Contents")] = writer._add_object(stream)
     buffer = io.BytesIO()
     writer.write(buffer)
-    parsed = parse_pdf_document(PDFDocumentInput(document_id="positioned", content=buffer.getvalue()))
-    expected = Counter(re.findall(r"[a-z]+|\d+", ("\n".join(lines) + "\nRotated label").lower()))
+    raw = buffer.getvalue()
+    parsed = parse_pdf_document(PDFDocumentInput(document_id="positioned", content=raw))
+    native_text = PdfReader(io.BytesIO(raw), strict=True).pages[0].extract_text() or ""
+    expected = Counter(re.findall(r"[a-z]+|\d+", native_text.lower()))
     assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == expected
+    assert Counter(character for character in parsed[0].text if not character.isspace()) == Counter(
+        character for character in "\n".join(lines) + "\nRotated label" if not character.isspace()
+    )
 
 
 @pytest.mark.parametrize("path", ["0 0 600 100 re", "0 0 m 600 0 l 600 100 l 0 100 l h"])

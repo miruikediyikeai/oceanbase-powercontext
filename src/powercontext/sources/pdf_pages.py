@@ -25,7 +25,7 @@ import zlib
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
-from itertools import pairwise
+from itertools import chain, pairwise
 from urllib.parse import quote
 
 from pydantic import BaseModel, Field, field_validator
@@ -182,7 +182,6 @@ _AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 _LEXICAL_TERMS = re.compile(r"[a-z]+|\d+")
 _YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 _FISCAL_YEAR = re.compile(r"\b(?:fy\s*|fiscal\s+year\s+(?:ended\s+)?)(19\d{2}|20\d{2})\b")
-_SPACED_GLYPHS = re.compile(r"\b(?:[A-Za-z0-9][^\S\r\n]+){3,}[A-Za-z0-9]\b")
 
 
 def _statement_heading(*titles: str) -> re.Pattern[str]:
@@ -390,51 +389,9 @@ def _extract_page_text(page: PageObject, validated: set[int]) -> str:
         _validate_text_resources(resources.get_object(), validated)
     # Clipping and rendering mode do not make text unextractable. Preserve the
     # complete pypdf output rather than applying visibility-based deletion.
-    text = page.extract_text() or ""
-    fragmented = _fragmented_glyph_count(text)
-    if not fragmented:
-        return text
-    # Some generators position every glyph and then append a TJ advance before
-    # ET. Plain extraction mistakes those unused advances for spaces inside words
-    # and numbers. Layout extraction uses the actual positions instead.
-    try:
-        layout = page.extract_text(extraction_mode="layout", layout_mode_strip_rotated=False) or ""
-    except (KeyError, TypeError, ValueError, NotImplementedError):
-        return text
-    if _fragmented_glyph_count(layout) < fragmented:
-        characters = Counter(character for character in text if not character.isspace())
-        if characters == Counter(character for character in layout if not character.isspace()):
-            return "\n".join(" ".join(line.split()) for line in layout.splitlines()).strip()
-    return _restore_positioned_runs(text, layout)
-
-
-def _fragmented_glyph_count(text: str) -> int:
-    return sum(sum(character.isalnum() for character in match[0]) for match in _SPACED_GLYPHS.finditer(text))
-
-
-def _restore_positioned_runs(text: str, layout: str) -> str:
-    positions = [index for index, character in enumerate(layout) if character.isalnum()]
-    compact = "".join(layout[index] for index in positions)
-
-    def restore(match: re.Match[str]) -> str:
-        needle = "".join(match[0].split())
-        candidates: set[str] = set()
-        offset = compact.find(needle)
-        while offset != -1:
-            candidate = layout[positions[offset] : positions[offset + len(needle) - 1] + 1]
-            if all(character.isalnum() or character.isspace() for character in candidate):
-                candidates.add(" ".join(candidate.split()))
-            offset = compact.find(needle, offset + 1)
-        if len(candidates) == 1:
-            candidate = candidates.pop()
-            if _fragmented_glyph_count(candidate) < _fragmented_glyph_count(match[0]):
-                return candidate
-        return match[0]
-
-    # Only restore spacing of matching character sequences, keeping the plain
-    # extraction's ordering, chart labels, rotated text, and every repeated digit.
-    # Layout mode can omit those items, so replacing a complete page is unsafe.
-    return _SPACED_GLYPHS.sub(restore, text)
+    # Rejoining glyphs can change regex token counts even when every character
+    # remains. The captured page retains extraction output without such edits.
+    return page.extract_text() or ""
 
 
 def _validate_text_stream(stream: StreamObject, validated: set[int]) -> None:
@@ -634,6 +591,12 @@ class _CorpusPage:
     document_key: str
     document_id: str
 
+    @property
+    def location(self) -> tuple[str, int]:
+        # The document id (literal or hashed) precedes the revision digest.
+        # Revisions keep their exact citations but share a returned page slot.
+        return self.source_id.rsplit(":", 2)[0], self.page_number
+
 
 async def _listed_pages(memory) -> tuple[_CorpusPage, ...]:
     list_entries = getattr(memory, "list", None)
@@ -663,17 +626,47 @@ def _corpus_pages(records: Iterable[MemoryEntryRecord]) -> tuple[_CorpusPage, ..
     return tuple(grouped.values())
 
 
+def _document_priorities(pages: tuple[_CorpusPage, ...], question: str, year: str) -> dict[str, tuple[bool, bool]]:
+    names = {page.document_key: page.document_id for page in pages}
+    matched = {key: _matches_document_name(name, question) for key, name in names.items()}
+    if any(matched.values()):
+        return {key: (flag, flag and bool(year) and year in _YEAR.findall(names[key])) for key, flag in matched.items()}
+
+    # Document ids are caller-owned identities, not guaranteed company names.
+    # Link questions to report contents before ranking their individual pages.
+    covers = dict.fromkeys(names, "")
+    for page in pages:
+        if page.page_number <= 3:
+            covers[page.document_key] += " " + page.text.partition("\n")[2].casefold()
+    terms = {
+        term
+        for term in re.findall(r"[a-z0-9]+", question)
+        if len(term) >= 2 and not term.isdigit() and term not in _QUERY_NOISE
+    }
+    overlaps = {key: terms & set(re.findall(r"[a-z0-9]+", text)) for key, text in covers.items()}
+    frequency: Counter[str] = Counter()
+    for words in overlaps.values():
+        frequency.update(words)
+    scores = {
+        key: math.fsum(math.log(len(names) / frequency[word]) for word in words) for key, words in overlaps.items()
+    }
+    best = max(scores.values(), default=0.0)
+    return {
+        key: (
+            best > 0 and score == best,
+            best > 0 and score == best and bool(year) and year in _YEAR.findall(covers[key]),
+        )
+        for key, score in scores.items()
+    }
+
+
 def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tuple[MemoryCitation, ...]:
     folded_question = _normalize_question(question)
     document_names = {page.document_key: page.document_id for page in pages}
     raw_question = unicodedata.normalize("NFKC", question).casefold()
     # A later maturity or target date does not identify the report's fiscal year.
     year = max(_FISCAL_YEAR.findall(raw_question) or _YEAR.findall(raw_question), default="")
-    priorities = {
-        key: (matched, matched and bool(year) and year in _YEAR.findall(name))
-        for key, name in document_names.items()
-        for matched in (_matches_document_name(name, folded_question),)
-    }
+    priorities = _document_priorities(pages, folded_question, year)
     identity_terms = {
         _stem(term)
         for key, name in document_names.items()
@@ -841,16 +834,18 @@ def _select_evidence_pages(
             anchors[following.source_id] = following
     # Reserve a small part of the result for each requested primary statement;
     # discussion pages remain eligible for the rest of the evidence budget.
-    selected = dict.fromkeys(tuple(anchors)[: limit // 2])
-    for source_id in channel_leaders:
+    reserved: dict[tuple[str, int], str] = {}
+    for page in anchors.values():
+        reserved.setdefault(page.location, page.source_id)
+    by_source = {page.source_id: page for page in ordered}
+    candidates = chain(tuple(reserved.values())[: limit // 2], channel_leaders, by_source)
+    selected: dict[tuple[str, int], str] = {}
+    for source_id in candidates:
         if len(selected) >= limit:
             break
-        selected.setdefault(source_id)
-    for page in ordered:
-        if len(selected) >= limit:
-            break
-        selected.setdefault(page.source_id)
-    return tuple(page.citation for page in ordered if page.source_id in selected)
+        selected.setdefault(by_source[source_id].location, source_id)
+    selected_ids = set(selected.values())
+    return tuple(page.citation for page in ordered if page.source_id in selected_ids)
 
 
 def _matches_document_name(document_id: str, question: str) -> bool:

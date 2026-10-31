@@ -112,13 +112,19 @@ def test_reopened_memory_returns_distinct_exact_scoped_pdf_citations(tmp_path):
             assert len(journal) == len(observations) + 1
         async with open_builtin_runtime(config) as runtime:
             memory = runtime.memory.for_scope(scope.scope_id)
+            historical = next(
+                record.citation
+                for record in (await memory.list()).entries
+                if record.entry.sources[0].source_id == observations[0].name
+            )
             assert await search_pdf_pages(memory, "Revenue", limit=0) == ()
             assert await search_pdf_pages(memory, "Revenue", limit=-1) == ()
             assert await search_pdf_pages(memory, "  ") == ()
             saved = None
             for limit in (1, 2, 20):
                 citations = await search_pdf_pages(memory, "What is ACME revenue in 2022?", limit=limit)
-                assert len(citations) == min(limit, len(page_by_source))
+                page_locations = {(page.document_id, page.page_number) for page in page_by_source.values()}
+                assert len(citations) == min(limit, len(page_locations))
                 locations = set()
                 for citation in citations:
                     record = await memory.get(GetMemoryEntryRequest(citation=citation))
@@ -127,7 +133,7 @@ def test_reopened_memory_returns_distinct_exact_scoped_pdf_citations(tmp_path):
                     assert reference.source_type == "pdf-page"
                     page = page_by_source[reference.source_id]
                     assert record.entry.text == f"{page.document_id}\n{page.text}".strip()
-                    locations.add((page.document_id, page.document_sha256, page.page_number))
+                    locations.add((page.document_id, page.page_number))
                 assert len(locations) == len(citations)
                 saved = citations[0]
                 first = await memory.get(GetMemoryEntryRequest(citation=citations[0]))
@@ -144,6 +150,52 @@ def test_reopened_memory_returns_distinct_exact_scoped_pdf_citations(tmp_path):
         async with open_builtin_runtime(config) as runtime:
             record = await runtime.memory.for_scope(scope.scope_id).get(GetMemoryEntryRequest(citation=saved))
             assert "Revenue" in record.entry.text
+            original = await runtime.memory.for_scope(scope.scope_id).get(GetMemoryEntryRequest(citation=historical))
+            assert original.entry.text == f"ACME_2022_10K\n{'Revenue ' * 80}".strip()
+
+    asyncio.run(scenario())
+
+
+def test_document_ids_are_opaque_when_locating_a_company_statement(tmp_path):
+    async def scenario():
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'opaque.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        statement = (
+            "Consolidated Statements of Income\n2022 2021 2020\n"
+            "Net revenue 9000 8000 7000\nOperating income 2000 1900 1800\n"
+            "Income taxes 500 400 300\nNet income 1500 1400 1300"
+        )
+        expected = None
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(
+                ScopeDraft(title="Reports", summary="opaque ids", idempotency_key="ids")
+            )
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            for index in range(25):
+                company = "Acme" if index == 24 else f"Other Company {index}"
+                document = PDFDocumentInput(
+                    document_id=f"input-{index:02}", content=make_pdf(f"{company}\nAnnual Report 2022", statement)
+                )
+                for page in parse_pdf_document(document):
+                    observation = project_source_for_transport(registry, await registry.resolve(page))
+                    await runtime.ingestion.submit(
+                        SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                    )
+                    if index == 24 and page.page_number == 2:
+                        expected = observation.name
+            await flush_all(runtime.memory.for_scope(scope.scope_id), 50)
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            for interface in (memory, SearchOnlyMemory(memory)):
+                citations = await search_pdf_pages(interface, "What was Acme's net income in FY2022?", limit=20)
+                sources = {
+                    source.source_id
+                    for citation in citations
+                    for source in (await memory.get(GetMemoryEntryRequest(citation=citation))).entry.sources
+                }
+                assert expected is not None and expected in sources
+                assert len(sources) == len(citations) <= 20
 
     asyncio.run(scenario())
 

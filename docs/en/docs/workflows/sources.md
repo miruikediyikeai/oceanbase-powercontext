@@ -42,8 +42,8 @@ PDFs readable with an empty password are accepted; invalid, truncated, or passwo
 raise `ValueError` without returning partial pages. Text extraction preserves page boundaries and does
 not perform OCR. The parser checks page-tree counts and Flate stream integrity, including text in
 form resources and font character maps, before accepting the document.
-For individually positioned glyphs, matching character sequences from layout extraction restore word
-and number spacing. All other text, including chart labels and rotated text, stays in the page.
+Captured text uses pypdf's extraction output without joining individually positioned glyphs into words
+or numbers. Preserving characters alone does not preserve the regex token counts used for validation.
 All text extractable by pypdf is retained, including text drawn under clipping paths and repeated
 table values. Visual clipping is not used to delete captured content.
 
@@ -61,6 +61,8 @@ After processing, call `await search_pdf_pages(runtime.memory.for_scope(scope_id
 The result is a tuple of exact `MemoryCitation` values for distinct pages, which can be read through
 `memory.get(GetMemoryEntryRequest(citation=citation))`, including after reopening Runtime. Nonpositive
 limits and blank questions return an empty tuple. Other Source types are excluded.
+Each document and physical page occupies at most one result slot across PDF revisions. The selected
+citation identifies its exact stored revision; earlier citations remain readable.
 
 Retrieval uses the scoped public Memory API and combines independent rankings of original question
 terms and financial vocabulary expansions. Company names and fiscal years prioritize matching document
@@ -68,6 +70,8 @@ identities. For questions about financial statements, a small part of the result
 matching income, cash flow, and balance sheet pages identified by headings and numeric content,
 including adjacent pages marked as continuations. Word inflections and fiscal-year prefixes are
 normalized during scoring.
+Document IDs may be opaque. When an ID does not identify the company, question terms shared with the
+opening pages provide document context for ranking statements that omit the company name.
 Financial paraphrases map to accounting terms, such as supplier payment obligations to accounts payable
 and rented buildings to operating leases. A bounded part of the result budget preserves the strongest
 hits from both the original and expanded queries, including note pages with no literal query overlap.
