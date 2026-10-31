@@ -161,34 +161,89 @@ _PRECISE_PHRASE_LIMIT = 6
 _AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 _LEXICAL_TERMS = re.compile(r"[a-z]+|\d+")
 _YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
+_FISCAL_YEAR = re.compile(r"\b(?:fy\s*|fiscal\s+year\s+(?:ended\s+)?)(19\d{2}|20\d{2})\b")
 _SPACED_GLYPHS = re.compile(r"\b(?:[A-Za-z0-9][^\S\r\n]+){3,}[A-Za-z0-9]\b")
+
+
+def _statement_heading(*titles: str) -> re.Pattern[str]:
+    # PDF text objects can split a title within a word or put its last letter
+    # on another line. This affects retrieval only, not the captured page text.
+    alternatives = (
+        r"\s+".join(r"\s*".join(re.escape(character) for character in word) for word in title.split())
+        for title in titles
+    )
+    return re.compile(
+        r"^\s*(?:(?:consolidated|combined|condensed|group|unaudited)\s+)*(?:" + "|".join(alternatives) + r")\b",
+        re.MULTILINE,
+    )
+
+
 # A query can need several primary statements whose rows use different wording.
-# Heading detection excludes narrative references and requires numeric table content.
+# Row concepts distinguish tables from indexes and narrative title references.
 _STATEMENT_INTENTS = (
     (
-        re.compile(r"income|earnings|revenue|sales|margin|profit|ebitda|p&l|tax|cost of|return on|\bro[ae]\b"),
-        re.compile(
-            r"^\s*(?:(?:consolidated|combined|condensed|group|unaudited)\s+)*"
-            r"(?:statements?\s+of\s+(?:consolidated\s+)?(?:income|operations|earnings|profit)|income\s+statements?)\b",
-            re.MULTILINE,
+        re.compile(r"income|earnings|revenue|sales|margin|profit|ebitda|p&l|tax|cost of|return on|payout|\bro[ae]\b"),
+        _statement_heading(
+            "statement of income",
+            "statements of income",
+            "statements of consolidated income",
+            "statement of operations",
+            "statements of operations",
+            "statement of earnings",
+            "statements of earnings",
+            "statement of profit",
+            "statements of profit",
+            "income statement",
+            "income statements",
+        ),
+        (
+            r"\b(?:net (?:sales|revenue)|total (?:net )?(?:sales|revenue)|revenues?)\b",
+            r"\b(?:cost of (?:sales|revenue)|operating (?:income|profit|expenses))\b",
+            r"\b(?:net (?:income|earnings)|income tax|earnings per)\b",
         ),
     ),
     (
-        re.compile(r"cash.?flow|ebitda|\bfcf\b|capex|capital (?:expenditure|spending)|depreciation|amortization|d&a"),
         re.compile(
-            r"^\s*(?:(?:consolidated|combined|condensed|group|unaudited)\s+)*"
-            r"(?:statements?\s+of\s+(?:consolidated\s+)?cash\s+flows?|cash\s+flow\s+statements?)\b",
-            re.MULTILINE,
+            r"cash.?flow|ebitda|\bfcf\b|capex|capital (?:expenditure|spending)|depreciation|amortization|d&a|"
+            r"dividend|payout|repurchas|buyback"
+        ),
+        _statement_heading(
+            "statement of cash flow",
+            "statements of cash flow",
+            "statement of cash flows",
+            "statements of cash flows",
+            "statements of consolidated cash flows",
+            "cash flow statement",
+            "cash flow statements",
+            "cash flows statements",
+        ),
+        (
+            r"\b(?:operating activities|cash (?:provided by|from) (?:operating|operations))\b",
+            r"\binvesting activities\b",
+            r"\bfinancing activities\b",
+            r"\b(?:net income|depreciation|amortization)\b",
         ),
     ),
     (
         re.compile(
-            r"balance sheet|financial position|asset|liabilit|equity|debt|working capital|receivable|inventor|ratio|return on|\bro[ae]\b"
+            r"balance sheet|financial position|asset|liabilit|equity|debt|working capital|receivable|inventor|"
+            r"(?:current|quick|cash) ratio|leverage|return on|\bro[ae]\b"
         ),
-        re.compile(
-            r"^\s*(?:(?:consolidated|combined|condensed|group|unaudited)\s+)*"
-            r"(?:balance\s+sheets?|statements?\s+of\s+(?:financial\s+)?(?:position|condition))\b",
-            re.MULTILINE,
+        _statement_heading(
+            "balance sheet",
+            "balance sheets",
+            "statement of financial position",
+            "statements of financial position",
+            "statement of financial condition",
+            "statements of financial condition",
+            "statement of condition",
+            "statements of condition",
+        ),
+        (
+            r"\b(?:total assets|current assets)\b",
+            r"\b(?:total liabilities|current liabilities)\b",
+            r"\b(?:stockholders|shareholders|shareowners).{0,3} equity\b",
+            r"\bcash and (?:cash equivalents|due from banks)\b",
         ),
     ),
 )
@@ -589,7 +644,9 @@ def _corpus_pages(records: Iterable[MemoryEntryRecord]) -> tuple[_CorpusPage, ..
 def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tuple[MemoryCitation, ...]:
     folded_question = _normalize_question(question)
     document_names = {page.document_key: page.document_id for page in pages}
-    year = max(_YEAR.findall(folded_question), default="")
+    raw_question = unicodedata.normalize("NFKC", question).casefold()
+    # A later maturity or target date does not identify the report's fiscal year.
+    year = max(_FISCAL_YEAR.findall(raw_question) or _YEAR.findall(raw_question), default="")
     priorities = {
         key: (matched, matched and bool(year) and year in _YEAR.findall(name))
         for key, name in document_names.items()
@@ -681,7 +738,7 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
             page.source_id,
         ),
     )
-    return _select_evidence_pages(ordered, folded_question, priorities, limit)
+    return _select_evidence_pages(ordered, folded_question, priorities, limit, year=year)
 
 
 def _normalize_question(question: str) -> str:
@@ -689,34 +746,58 @@ def _normalize_question(question: str) -> str:
     return re.sub(r"\bfy\s*(\d{4})\b", r"\1", normalized)
 
 
+def _primary_statement_pages(
+    ordered: list[_CorpusPage],
+    bodies: dict[str, str],
+    question: str,
+    priorities: dict[str, tuple[bool, bool]],
+    year: str,
+) -> tuple[_CorpusPage, ...]:
+    best_priority = max(priorities.values())
+    anchors: dict[str, _CorpusPage] = {}
+    for intent, heading, rows in _STATEMENT_INTENTS:
+        if not intent.search(question):
+            continue
+        candidates = []
+        for page in ordered:
+            body = bodies[page.source_id]
+            if priorities[page.document_key] != best_priority or len(_AMOUNT_PATTERN.findall(body)) < 8:
+                continue
+            match = heading.search(body)
+            if match is None:
+                continue
+            flat = " ".join(body.split())
+            row_count = sum(re.search(row, flat) is not None for row in rows)
+            if not row_count:
+                continue
+            # Some producers draw titles after the table, so a title anywhere
+            # on the same page is eligible. Actual rows outrank TOC references.
+            quality = (
+                -row_count,
+                "consolidated" not in match[0],
+                bool(year) and year not in body,
+                not _matches_document_name(page.document_id, body),
+            )
+            candidates.append((quality, page))
+        candidates.sort(key=lambda candidate: candidate[0])
+        for _, page in candidates[:2]:
+            anchors[page.source_id] = page
+    return tuple(anchors.values())
+
+
 def _select_evidence_pages(
     ordered: list[_CorpusPage],
     question: str,
     priorities: dict[str, tuple[bool, bool]],
     limit: int,
+    *,
+    year: str,
 ) -> tuple[MemoryCitation, ...]:
-    best_priority = max(priorities.values())
-    year = max(_YEAR.findall(question), default="")
-    headers = {page.source_id: page.text.partition("\n")[2][:1200].casefold() for page in ordered}
-    anchors: dict[str, _CorpusPage] = {}
-    for intent, heading in _STATEMENT_INTENTS:
-        if not intent.search(question):
-            continue
-        candidates = sorted(
-            (
-                page
-                for page in ordered
-                if priorities[page.document_key] == best_priority
-                and heading.search(headers[page.source_id])
-                and len(_AMOUNT_PATTERN.findall(page.text)) >= 8
-            ),
-            key=lambda page: (
-                bool(year) and year not in headers[page.source_id],
-                not _matches_document_name(page.document_id, headers[page.source_id]),
-            ),
-        )
-        for _, page in zip(range(2), candidates, strict=False):
-            anchors[page.source_id] = page
+    bodies = {
+        page.source_id: unicodedata.normalize("NFKC", page.text.partition("\n")[2]).casefold() for page in ordered
+    }
+    headers = {source_id: text[:1200] for source_id, text in bodies.items()}
+    anchors = {page.source_id: page for page in _primary_statement_pages(ordered, bodies, question, priorities, year)}
     locations = {(page.document_key, page.page_number): page for page in ordered}
     for anchor in tuple(anchors.values()):
         following = locations.get((anchor.document_key, anchor.page_number + 1))

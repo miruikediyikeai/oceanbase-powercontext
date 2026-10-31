@@ -66,6 +66,12 @@ identities. For questions about financial statements, a small part of the result
 matching income, cash flow, and balance sheet pages identified by headings and numeric content,
 including adjacent pages marked as continuations. Word inflections and fiscal-year prefixes are
 normalized during scoring.
+Statement recognition tolerates words split across PDF text objects, plural and reordered titles,
+and titles drawn after the table. Financial row concepts distinguish primary tables from indexes
+and narrative references. Ratio questions preserve the statements needed for both operands,
+including income and cash flow statements for dividend payout ratios.
+An explicit fiscal year takes precedence over other dates, such as future debt maturities,
+when selecting the report revision by year.
 
 When inventory listing is available, each query reads the current scope's PDF entries and scores their
 complete texts; work and temporary storage grow with the scoped corpus size. With a search/get-only
