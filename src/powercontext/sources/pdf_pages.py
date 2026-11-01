@@ -32,7 +32,6 @@ from urllib.parse import quote
 from pydantic import BaseModel, Field, field_validator
 from pypdf import PageObject, PdfReader
 from pypdf._font import Font
-from pypdf._text_extraction._layout_mode._text_state_params import TextStateParams
 from pypdf.generic import (
     ArrayObject,
     ContentStream,
@@ -95,11 +94,12 @@ _QUERY_NOISE = frozenset(
         "disclose disclosed disclosure regarding provide provided"
     ).split()
 )
-_GEOGRAPHY_QUESTION = re.compile(r"geograph|countries|regions|primarily operates")
+_GEOGRAPHY_QUESTION = re.compile(r"geograph|countr(?:y|ies)|regions?|primarily operates")
 _NUMERIC_QUESTION = re.compile(
     r"margin|income|revenue|expense|cost|ebitda|capex|cash flow|earnings|profit|tax|debt|dividend|amount|"
-    r"quantity|million|balance sheet|impairment"
+    r"quantity|million|balance sheet|impairment|(?:capital|asset)[ -]intens|capital[ -]light"
 )
+_CAPITAL_INTENSITY_PATTERN = r"(?:capital|asset)[ -]intens|capital[ -]light"
 _OPERATING_RATIO_PATTERN = (
     r"(?:asset|inventory|inventories|receivables?|payables?|working capital) turnover|"
     r"(?:cash conversion|cash operating|operating) cycle|"
@@ -119,7 +119,10 @@ _REGION_NAMES = (
 _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (_GEOGRAPHY_QUESTION, ("reportable segments", "organized into", "geographic")),
     (re.compile(r"segments?|business units|business divisions"), ("reportable segments", "operating segments")),
-    (re.compile(r"legal|litigation|lawsuit|battles"), ("legal proceedings", "litigation", "legal matters")),
+    (
+        re.compile(r"legal|litigat|lawsuit|battles"),
+        ("legal proceedings", "litigation", "legal matters", "commitments and contingencies"),
+    ),
     (
         re.compile(r"income statement|p&l|p l statement|profit and loss"),
         ("statement of income", "statements of income", "statements of operations", "operating profit"),
@@ -144,7 +147,41 @@ _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (re.compile(r"repurchas|buyback|buy(?:ing)? back|bought back"), ("share repurchase", "treasury stock")),
     (re.compile(r"effective tax|tax rate"), ("effective tax", "income taxes")),
     (re.compile(r"goodwill"), ("goodwill",)),
-    (re.compile(r"gross margin|gross profit"), ("gross profit", "cost of sales")),
+    (
+        re.compile(r"gross margin|gross profit|cost of goods sold"),
+        ("gross profit", "gross margin", "cost of sales", "cost of goods sold", "cost of products sold"),
+    ),
+    (re.compile(r"\bpp(?:ne|e)\b"), ("property plant and equipment", "property plant equipment")),
+    (
+        re.compile(r"liquidat|bankrupt|book value"),
+        ("book value per share", "tangible book value", "common equity", "net assets"),
+    ),
+    (
+        re.compile(r"(?:major|primary|principal|significant) customers|customer concentration"),
+        (
+            "major customers",
+            "significant customers",
+            "principal customers",
+            "customer concentration",
+            "government customers",
+        ),
+    ),
+    (
+        re.compile(r"operating(?: (?:income|profit))? margin"),
+        ("operating income margin", "operating margin", "operating expenses", "percent of net sales"),
+    ),
+    (
+        re.compile(r"organic|\bm\s*&\s*a\b|exclud.*(?:acquisition|merger)"),
+        ("organic sales", "organic growth", "sales change", "by business segment"),
+    ),
+    (
+        re.compile(r"(?=.*dividend)(?=.*(?:trend|stable|maintain|histor|consisten|regular))"),
+        ("quarterly dividend", "consecutive year", "dividend increases", "per share"),
+    ),
+    (
+        re.compile(_CAPITAL_INTENSITY_PATTERN),
+        ("capital expenditure", "property plant and equipment", "total assets", "net sales", "depreciation"),
+    ),
     (re.compile(r"\brevenues?\b|\b(?:net )?sales\b|\bturnover\b"), ("net revenue", "net sales", "total revenue")),
     (
         re.compile(r"interest expense|long.term debt|borrowings?|debt maturit|repay\w* (?:loans?|debt)"),
@@ -188,7 +225,10 @@ _EXPANSIONS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
     (re.compile(r"auditor|independent registered"), ("independent registered public accounting",)),
     (re.compile(r"risk factor"), ("risk factors",)),
     (re.compile(r"impairment"), ("impairment",)),
-    (re.compile(r"acquisition|divestiture"), ("acquisition", "divestiture")),
+    (
+        re.compile(r"acquisition|acquir|divestiture"),
+        ("acquisition", "acquired", "business combinations", "divestiture"),
+    ),
 )
 _PHRASE_BONUS = 8.0
 _NEIGHBOR_BONUS = 6.0
@@ -197,7 +237,16 @@ _AMOUNT_PATTERN = re.compile(r"\d[\d,]{2,}")
 _LEXICAL_TERMS = re.compile(r"[a-z]+|\d+")
 _WORD = re.compile(r"[A-Za-z]+")
 _SPACED_LETTERS = re.compile(r"(?<!\w)(?:[A-Za-z][ \t]+){3,}[A-Za-z](?!\w)")
-_TEXT_LIGATURES = str.maketrans({"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"})
+_PDF_TEXT_TRANSLATION = str.maketrans({
+    "ﬀ": "ff",
+    "ﬁ": "fi",
+    "ﬂ": "fl",
+    "ﬃ": "ffi",
+    "ﬄ": "ffl",
+    "ﬅ": "st",
+    "ﬆ": "st",
+    "\u00a0": None,
+})
 _WORD_PARTICLES = frozenset({
     "a",
     "an",
@@ -231,11 +280,11 @@ def _statement_heading(*titles: str) -> re.Pattern[str]:
     # PDF text objects can split a title within a word or put its last letter
     # on another line. This affects retrieval only, not the captured page text.
     alternatives = (
-        r"\s+".join(r"\s*".join(re.escape(character) for character in word) for word in title.split())
+        r"\s*".join(r"\s*".join(re.escape(character) for character in word) for word in title.split())
         for title in titles
     )
     return re.compile(
-        r"^\s*(?:(?:consolidated|combined|condensed|group|unaudited)\s+)*(?:" + "|".join(alternatives) + r")\b",
+        r"^\s*(?:(?:consolidated|combined|condensed|group|unaudited)\s*)*(?:" + "|".join(alternatives) + r")\b",
         re.MULTILINE,
     )
 
@@ -246,7 +295,7 @@ _STATEMENT_INTENTS = (
     (
         re.compile(
             r"income|earnings|revenue|sales|margin|profit|ebitda|p&l|tax|cost of|return on|payout|\bro[ae]\b|"
-            r"interest coverage|times interest earned|" + _OPERATING_RATIO_PATTERN
+            r"interest coverage|times interest earned|" + _OPERATING_RATIO_PATTERN + "|" + _CAPITAL_INTENSITY_PATTERN
         ),
         _statement_heading(
             "statement of income",
@@ -263,14 +312,14 @@ _STATEMENT_INTENTS = (
         ),
         (
             r"\b(?:net (?:sales|revenue)|total (?:net )?(?:sales|revenue)|revenues?)\b",
-            r"\b(?:cost of (?:sales|revenue)|operating (?:income|profit|expenses))\b",
+            r"\b(?:cost of (?:sales|revenues?|goods sold|products sold)|operating (?:income|profit|expenses))\b",
             r"\b(?:net (?:income|earnings)|income tax|earnings per)\b",
         ),
     ),
     (
         re.compile(
             r"cash.?flow|ebitda|\bfcf\b|capex|capital (?:expenditure|spending)|depreciation|amortization|d&a|"
-            r"dividend|payout|repurchas|buyback"
+            r"dividend|payout|repurchas|buyback|" + _CAPITAL_INTENSITY_PATTERN
         ),
         _statement_heading(
             "statement of cash flow",
@@ -292,7 +341,11 @@ _STATEMENT_INTENTS = (
     (
         re.compile(
             r"balance sheet|financial position|asset|liabilit|equity|debt|working capital|receivable|inventor|"
-            r"(?:current|quick|cash) ratio|leverage|return on|\bro[ae]\b|" + _OPERATING_RATIO_PATTERN
+            r"\bpp(?:ne|e)\b|liquidat|bankrupt|book value|"
+            r"(?:current|quick|cash) ratio|leverage|return on|\bro[ae]\b|"
+            + _OPERATING_RATIO_PATTERN
+            + "|"
+            + _CAPITAL_INTENSITY_PATTERN
         ),
         _statement_heading(
             "balance sheet",
@@ -468,21 +521,25 @@ def _join_word_fragments(page: PageObject, text: str, vocabulary: Counter[str]) 
 
 
 def _literal_page_text(page: PageObject) -> str:
-    page = _restore_actual_text_font_maps(page)
+    return "".join(_literal_page_runs(page))
+
+
+def _literal_page_runs(page: PageObject) -> tuple[str, ...]:
     contents = page.get_contents()
     resources = page.get("/Resources")
     if contents is None or resources is None:
-        return ""
-    return _literal_resource_text(contents, resources.get_object(), page.pdf, set(), {})
+        return ()
+    page = _restore_actual_text_font_maps(page, contents)
+    return _literal_resource_runs(contents, page.get("/Resources", resources).get_object(), page.pdf, set(), {})
 
 
-def _literal_resource_text(
+def _literal_resource_runs(
     contents: ContentStream,
     resources: DictionaryObject,
     reader,
     ancestors: set[int],
     fonts: dict[int, Font],
-) -> str:
+) -> tuple[str, ...]:
     font_resources = resources.get("/Font", DictionaryObject()).get_object()
     font: Font | None = None
     saved_fonts: list[Font | None] = []
@@ -504,23 +561,38 @@ def _literal_resource_text(
             for raw in _shown_text_bytes(operands, operator):
                 # Use the locked extractor's glyph decoding, without its
                 # inferred geometric spaces between text-show operations.
-                text.append(TextStateParams(raw, font, 1).text.translate(_TEXT_LIGATURES))
+                text.append(_decode_pdf_run(raw, font).translate(_PDF_TEXT_TRANSLATION))
         elif operator == b"Do":
-            text.append(_literal_form_text(operands[0], resources, reader, ancestors, fonts))
-    return "".join(text)
+            text.extend(_literal_form_runs(operands[0], resources, reader, ancestors, fonts))
+    return tuple(text)
 
 
-def _literal_form_text(
+def _decode_pdf_run(raw: bytes, font: Font) -> str:
+    # Use the locked extractor's font decoding without computing layout
+    # matrices and glyph widths for every text-show string a second time.
+    try:
+        if isinstance(font.encoding, str):
+            decoded = raw.decode(font.encoding, "surrogatepass")
+        else:
+            decoded = "".join(
+                font.encoding[value] if value in font.encoding else bytes((value,)).decode() for value in raw
+            )
+    except UnicodeDecodeError:
+        decoded = raw.decode("utf-8", "replace")
+    return "".join(font.character_map.get(character, character) for character in decoded)
+
+
+def _literal_form_runs(
     name: str, resources: DictionaryObject, reader, ancestors: set[int], fonts: dict[int, Font]
-) -> str:
+) -> tuple[str, ...]:
     forms = resources.get("/XObject", DictionaryObject()).get_object()
     form = forms.get(name)
     if form is None:
-        return ""
+        return ()
     form = form.get_object()
     if not isinstance(form, StreamObject) or form.get("/Subtype") != "/Form" or id(form) in ancestors:
-        return ""
-    return _literal_resource_text(
+        return ()
+    return _literal_resource_runs(
         ContentStream(form, reader),
         form.get("/Resources", resources).get_object(),
         reader,
@@ -580,10 +652,25 @@ def _extract_page_text(page: PageObject, validated: set[int]) -> str:
     if "\x00" in plain:
         page = _restore_actual_text_font_maps(page)
         plain = page.extract_text() or ""
-    return _recover_word_boundaries(page, plain.translate(_TEXT_LIGATURES))
+    # Control characters encoded inside a text-show string are not geometric
+    # line breaks. Preserve boundaries between separate PDF text operations.
+    literal_controls = {
+        run: re.sub(r"(?<=\S)[\r\n]+(?=\S)", "", run)
+        for run in _literal_page_runs(page)
+        if re.search(r"\S[\r\n]+\S", run)
+    }
+    text = _recover_word_boundaries(page, _normalize_pdf_text(plain, literal_controls), literal_controls)
+    return text if text.strip() else ""
 
 
-def _restore_actual_text_font_maps(page: PageObject) -> PageObject:
+def _normalize_pdf_text(text: str, literal_controls: dict[str, str]) -> str:
+    text = text.translate(_PDF_TEXT_TRANSLATION)
+    for original, replacement in literal_controls.items():
+        text = text.replace(original, replacement)
+    return text
+
+
+def _restore_actual_text_font_maps(page: PageObject, contents: ContentStream | None = None) -> PageObject:
     """Recover missing glyph mappings from this PDF's own marked content.
 
     Some producers map ligatures to NUL in ToUnicode and supply their Unicode
@@ -592,7 +679,8 @@ def _restore_actual_text_font_maps(page: PageObject) -> PageObject:
     fonts/resources are copied so shared objects on other pages stay intact.
     """
     resources = page.get("/Resources")
-    contents = page.get_contents()
+    if contents is None:
+        contents = page.get_contents()
     if resources is None or contents is None:
         return page
     result = copy(page)
@@ -688,12 +776,12 @@ def _actual_text_glyphs(contents: ContentStream, properties: DictionaryObject) -
     return replacements
 
 
-def _recover_word_boundaries(page: PageObject, plain: str) -> str:
+def _recover_word_boundaries(page: PageObject, plain: str, literal_controls: dict[str, str]) -> str:
     fragments = tuple((left, right) for left, right in re.findall(r"(?=\b([A-Za-z]+)\s+([A-Za-z]+)\b)", plain))
     if not fragments:
         return plain
-    layout = (page.extract_text(extraction_mode="layout", layout_mode_strip_rotated=False) or "").translate(
-        _TEXT_LIGATURES
+    layout = _normalize_pdf_text(
+        page.extract_text(extraction_mode="layout", layout_mode_strip_rotated=False) or "", literal_controls
     )
     # Never lose rotated labels or any non-whitespace character when changing
     # word and number boundaries using positions instead of drawing order.
@@ -996,11 +1084,84 @@ def _corpus_pages(records: Iterable[MemoryEntryRecord]) -> tuple[_CorpusPage, ..
     return tuple(grouped.values())
 
 
+def _alias_documents(pages: tuple[_CorpusPage, ...], names: dict[str, str], question: str) -> dict[str, bool]:
+    matched = dict.fromkeys(names, False)
+    aliases = {
+        re.sub(r"[^a-z]", "", word.casefold())
+        for word in re.findall(r"\b[A-Z][A-Za-z&]{1,11}\b", question)
+        if sum(char.isupper() for char in word) >= 2
+    } - {
+        "usd",
+        "eur",
+        "gbp",
+        "cad",
+        "us",
+        "uk",
+        "fy",
+        "gaap",
+        "ifrs",
+        "ebitda",
+        "ebit",
+        "eps",
+        "roa",
+        "roe",
+        "roic",
+        "roi",
+        "cogs",
+        "ppne",
+        "ppe",
+        "fcf",
+        "cfo",
+        "ceo",
+        "sec",
+        "ipo",
+        "esg",
+        "rnd",
+        "ltm",
+        "ttm",
+    }
+    if aliases:
+        for key, name in names.items():
+            company = re.split(r"[_\s-](?=(?:19|20)\d{2}(?:\D|$))", name, maxsplit=1)[0]
+            words = re.findall(r"[A-Za-z]+", company)
+            compact = "".join(words).casefold()
+            initials = "".join(word[0] for word in words).casefold()
+            matched[key] = any(
+                (len(alias) >= 3 and compact.startswith(alias))
+                or (len(words) >= 2 and alias in {initials, "n".join(initials)})
+                for alias in aliases
+            )
+        if not any(matched.values()):
+            # Abbreviations not derivable from caller-owned ids must actually
+            # occur in the stored PDF. Topic words never establish identity.
+            pattern = re.compile(r"\b(?:" + "|".join(re.escape(alias) for alias in aliases) + r")\b", re.IGNORECASE)
+            for page in pages:
+                if pattern.search(page.text.partition("\n")[2]):
+                    matched[page.document_key] = True
+    return matched
+
+
 def _document_priorities(pages: tuple[_CorpusPage, ...], question: str, year: str) -> dict[str, tuple[bool, bool]]:
     names = {page.document_key: page.document_id for page in pages}
-    matched = {key: re.search(_document_name_pattern(name), question) is not None for key, name in names.items()}
+    folded = _normalize_question(question)
+    matched = {key: re.search(_document_name_pattern(name), folded) is not None for key, name in names.items()}
+    if not any(matched.values()):
+        matched = _alias_documents(pages, names, question)
     if any(matched.values()):
-        return {key: (flag, flag and bool(year) and year in _YEAR.findall(names[key])) for key, flag in matched.items()}
+        # Without an explicit date, use the latest matching report. A filing
+        # type explicitly requested by the caller takes precedence over age.
+        filing = re.search(r"\b10[ -]?([kq])\b", folded)
+        if filing:
+            filings = {key: bool(re.search(r"10[ _-]?" + filing[1], name.casefold())) for key, name in names.items()}
+            if any(flag and filings[key] for key, flag in matched.items()):
+                matched = {key: flag and filings[key] for key, flag in matched.items()}
+        preferred_year = year or max(
+            (value for key, name in names.items() if matched[key] for value in _YEAR.findall(name)), default=""
+        )
+        return {
+            key: (flag, flag and bool(preferred_year) and preferred_year in _YEAR.findall(names[key]))
+            for key, flag in matched.items()
+        }
 
     # Document ids are caller-owned identities, not guaranteed company names.
     # Link questions to report contents before ranking their individual pages.
@@ -1010,7 +1171,7 @@ def _document_priorities(pages: tuple[_CorpusPage, ...], question: str, year: st
             covers[page.document_key] += " " + page.text.partition("\n")[2].casefold()
     terms = {
         term
-        for term in re.findall(r"[a-z0-9]+", question)
+        for term in re.findall(r"[a-z0-9]+", folded)
         if len(term) >= 2 and not term.isdigit() and term not in _QUERY_NOISE
     }
     overlaps = {key: terms & set(re.findall(r"[a-z0-9]+", text)) for key, text in covers.items()}
@@ -1033,10 +1194,9 @@ def _document_priorities(pages: tuple[_CorpusPage, ...], question: str, year: st
 def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tuple[MemoryCitation, ...]:
     folded_question = _normalize_question(question)
     document_names = {page.document_key: page.document_id for page in pages}
-    raw_question = unicodedata.normalize("NFKC", question).casefold()
     # A later maturity or target date does not identify the report's fiscal year.
-    year = max(_FISCAL_YEAR.findall(raw_question) or _YEAR.findall(raw_question), default="")
-    priorities = _document_priorities(pages, folded_question, year)
+    year = max(_FISCAL_YEAR.findall(folded_question) or _YEAR.findall(folded_question), default="")
+    priorities = _document_priorities(pages, question, year)
     identity_terms = {
         _stem(term)
         for key, name in document_names.items()
@@ -1144,7 +1304,15 @@ def _rank_pages(pages: tuple[_CorpusPage, ...], question: str, limit: int) -> tu
 
 def _normalize_question(question: str) -> str:
     normalized = unicodedata.normalize("NFKC", question).casefold()
-    return re.sub(r"\bfy\s*(\d{4})\b", r"\1", normalized)
+    normalized = re.sub(r"\btop[ -]?line\b", "revenue", normalized)
+
+    def fiscal_year(match: re.Match[str]) -> str:
+        value = match[1]
+        if len(value) == 2:
+            value = str(int(value) + (2000 if int(value) < 70 else 1900))
+        return "fy " + value
+
+    return re.sub(r"\bfy\s*['\u2019]?\s*(\d{4}|\d{2})\b", fiscal_year, normalized)
 
 
 def _primary_statement_pages(
@@ -1168,7 +1336,7 @@ def _primary_statement_pages(
             if match is None:
                 continue
             flat = " ".join(body.split())
-            row_count = sum(re.search(row, flat) is not None for row in rows)
+            row_count = sum(re.search(row.replace(" ", r"\s*"), flat) is not None for row in rows)
             if not row_count:
                 continue
             # Some producers draw titles after the table, so a title anywhere
@@ -1251,8 +1419,9 @@ def _lexical_score(
         seen = document_frequency[term]
         idf = math.log((total - seen + 0.5) / (seen + 0.5) + 1.0)
         score += idf * (frequency * 2.2) / (frequency + 1.2 * norm) * query_weight
+    compact = re.sub(r"\s+", "", folded)
     for phrase in phrases:
-        if phrase in folded:
+        if phrase in folded or phrase.replace(" ", "") in compact:
             score += _PHRASE_BONUS
     if numeric:
         amounts = len(_AMOUNT_PATTERN.findall(folded))

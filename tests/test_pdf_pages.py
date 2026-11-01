@@ -61,8 +61,9 @@ def make_pdf(*texts: str, password: str | None = None, broken_last_page: bool = 
                 NameObject("/Font"): DictionaryObject({NameObject("/F1"): font}),
             })
             stream = DecodedStreamObject()
-            escaped = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-            stream.set_data(f"BT /F1 12 Tf 20 750 Td ({escaped}) Tj ET".encode("ascii"))
+            lines = (line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in text.split("\n"))
+            shown = " T* ".join(f"({line}) Tj" for line in lines)
+            stream.set_data(f"BT /F1 12 Tf 14 TL 20 750 Td {shown} ET".encode("ascii"))
             page[NameObject("/Contents")] = writer._add_object(stream)
     if broken_last_page:
         # A real malformed content object on a later page, after valid text.
@@ -85,6 +86,42 @@ def test_extract_all_physical_pages_with_numbers_and_permissions(password):
     ]
     assert all(page.document_id == "sample" for page in pages)
     assert all(page.document_sha256 == hashlib.sha256(raw).hexdigest() for page in pages)
+
+
+@pytest.mark.parametrize("blank", ["", " ", " \t "])
+def test_whitespace_only_pages_remain_empty(blank):
+    pages = parse_pdf_document(PDFDocumentInput(document_id="blank", content=make_pdf("Revenue 1000", blank)))
+    assert len(pages) == 2 and pages[1].page_number == 2 and pages[1].text == ""
+
+
+def test_literal_pdf_control_characters_do_not_become_inferred_word_boundaries():
+    writer = PdfWriter()
+    writer.clone_document_from_reader(PdfReader(io.BytesIO(make_pdf("placeholder"))))
+    page = writer.pages[0]
+    resources = cast(DictionaryObject, page["/Resources"])
+    font = cast(DictionaryObject, cast(DictionaryObject, resources["/Font"])["/F1"])
+    mapping = DecodedStreamObject()
+    mapping.set_data(b"begincmap\n2 beginbfchar\n<A0> <00A0>\n<0A> <000A>\nendbfchar\nendcmap")
+    font[NameObject("/ToUnicode")] = writer._add_object(mapping)
+    stream = DecodedStreamObject()
+    stream.set_data(
+        b"BT /F1 12 Tf 20 750 Td (Current\\240assets) Tj "
+        b"0 -30 Td (Total\\nassets) Tj 0 -30 Td (Net sales 1000 1000) Tj "
+        b"0 -30 Td (Cash) Tj 0 -30 Td (balance) Tj ET"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    parsed = parse_pdf_document(PDFDocumentInput(document_id="controls", content=buffer.getvalue()))
+    assert Counter(re.findall(r"[a-z]+|\d+", parsed[0].text.lower())) == Counter({
+        "currentassets": 1,
+        "totalassets": 1,
+        "net": 1,
+        "sales": 1,
+        "1000": 2,
+        "cash": 1,
+        "balance": 1,
+    })
 
 
 @pytest.mark.parametrize("form_depth", [0, 2])

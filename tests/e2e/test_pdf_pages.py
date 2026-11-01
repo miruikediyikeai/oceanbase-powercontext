@@ -245,7 +245,7 @@ def test_document_ids_are_opaque_when_locating_a_company_statement(tmp_path):
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("layout", ["split-word", "inverted-title", "footer-title", "payout-ratio"])
+@pytest.mark.parametrize("layout", ["split-word", "inverted-title", "footer-title", "payout-ratio", "joined-labels"])
 def test_primary_tables_with_layout_variations_survive_discussion_pages(tmp_path, layout):
     async def scenario():
         income_rows = (
@@ -273,6 +273,9 @@ def test_primary_tables_with_layout_variations_survive_discussion_pages(tmp_path
         elif layout == "payout-ratio":
             target = "Consolidated Statements of Income\n" + income_rows
             question = "What is ACME's FY2022 dividend payout ratio?"
+        elif layout == "joined-labels":
+            target = "ConsolidatedStatementsofIncome\n" + income_rows.replace("Net sales", "Netsales")
+            question = "What was ACME gross profit margin in FY2022?"
         else:
             target = "Consolidated Statement of Incom\n\ne\n" + income_rows
             question = "What was ACME gross profit margin in FY2022?"
@@ -338,10 +341,16 @@ def test_ratio_questions_retrieve_every_required_statement_after_restart(tmp_pat
             "Cash and cash equivalents 1200 1100\nAccounts receivable 2000 1900\nInventories 900 800\n"
             "Total assets 9000 8500\nAccounts payable 700 600\nTotal liabilities 4000 3500"
         )
+        cash = (
+            "Consolidated Statements of Cash Flows\n2022 2021\n"
+            "Operating activities 2000 1800\nNet income 1500 1400\n"
+            "Depreciation and amortization 800 700\nInvesting activities 1000 900\n"
+            "Purchases of property plant and equipment 1000 900\nFinancing activities 500 400"
+        )
         config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'ratios.db'}"))
         registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
         document = PDFDocumentInput(
-            document_id="ACME_2022_10K", content=make_pdf(*(discussion for _ in range(24)), income, balance)
+            document_id="ACME_2022_10K", content=make_pdf(*(discussion for _ in range(24)), income, balance, cash)
         )
         pages = parse_pdf_document(document)
         observations = [project_source_for_transport(registry, await registry.resolve(page)) for page in pages]
@@ -357,10 +366,11 @@ def test_ratio_questions_retrieve_every_required_statement_after_restart(tmp_pat
         async with open_builtin_runtime(config) as runtime:
             memory = runtime.memory.for_scope(scope.scope_id)
             for metric, required in (
-                ("asset turnover", observations[-2:]),
-                ("cash conversion cycle", observations[-2:]),
-                ("days sales outstanding", observations[-2:]),
-                ("interest coverage ratio", observations[-2:-1]),
+                ("asset turnover", observations[-3:-1]),
+                ("cash conversion cycle", observations[-3:-1]),
+                ("days sales outstanding", observations[-3:-1]),
+                ("interest coverage ratio", observations[-3:-2]),
+                ("capital intensity", observations[-3:]),
             ):
                 for interface in (memory, SearchOnlyMemory(memory)):
                     citations = await search_pdf_pages(interface, f"What was ACME's {metric} in FY2022?", limit=20)
@@ -375,6 +385,30 @@ def test_ratio_questions_retrieve_every_required_statement_after_restart(tmp_pat
 @pytest.mark.parametrize(
     ("topic", "evidence"),
     [
+        (
+            "what drove the operating margin change",
+            "Results of operations\nOperating income margin 19.1 percent. "
+            "Operating expenses and cost of sales increased as a percent of net sales.",
+        ),
+        (
+            "growth of its segments excluding the impact of M&A",
+            "Sales change by business segment\nOrganic sales rose 3 percent. "
+            "Acquisitions and divestitures are presented separately.",
+        ),
+        (
+            "whether it maintains a stable dividend distribution trend",
+            "Quarterly dividend\nThe dividend increased for the tenth consecutive year. "
+            "Directors declared a distribution of two dollars per share.",
+        ),
+        ("changes in PPNE", "Property plant and equipment\nNet balance 4500 compared with 4200."),
+        ("companies it acquired", "Business combinations\nAcquisitions completed for total consideration of 3200."),
+        ("ongoing legal battles", "Legal proceedings\nLitigation and commitments and contingencies total 2500."),
+        ("liquidation proceeds per shareholder", "Common equity\nBook value per share 45 and net assets of 4500."),
+        (
+            "the region with the worst topline performance",
+            "Reportable segments\nNorth America net revenue 4500 4200 4100. "
+            "Europe net revenue 2500 3000 3100. Asia Pacific net revenue 1500 1600 1700.",
+        ),
         ("money spent buying back common shares", "Share repurchases\nTreasury stock acquired for 2500."),
         ("payment obligations to suppliers", "Accounts payable\nTrade payables were 3500."),
         ("future payments on rented buildings", "Operating leases\nMinimum lease payments total 4500."),
@@ -484,7 +518,19 @@ def test_financial_statement_evidence_survives_repeated_discussion_pages(tmp_pat
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("interference", ["other-year", "future-maturity", "statement-continuation", "specific-topic"])
+@pytest.mark.parametrize(
+    "interference",
+    [
+        "other-year",
+        "short-year",
+        "quoted-year",
+        "latest-report",
+        "requested-filing",
+        "future-maturity",
+        "statement-continuation",
+        "specific-topic",
+    ],
+)
 def test_evidence_survives_other_years_continued_tables_and_generic_financial_terms(tmp_path, interference):
     async def scenario():
         discussion = (
@@ -492,13 +538,33 @@ def test_evidence_survives_other_years_continued_tables_and_generic_financial_te
             "Cash flow statement depreciation and amortization capital expenditure capital spending. "
             "2022 2021 2020 9500 9000 8500 8000 7500 7000 6500 6000. "
         )
-        if interference == "other-year":
-            target = "Revenue from licensing agreements was 1200 in 2022."
+        if interference in {"other-year", "short-year", "quoted-year"}:
+            target = "Revenue from licensing agreements was 1200 in 2022. " + "Distribution channels overview. " * 80
             documents = (
                 PDFDocumentInput(document_id="ACME_2022_10K", content=make_pdf(target)),
                 PDFDocumentInput(document_id="ACME_2023_10K", content=make_pdf(*(discussion for _ in range(24)))),
             )
-            question = "What was ACME's revenue in FY2022?"
+            fiscal_year = {"short-year": "FY22", "quoted-year": "FY '22"}.get(interference, "FY2022")
+            question = f"What was ACME's revenue in {fiscal_year}?"
+            expected_page = 1
+        elif interference in {"latest-report", "requested-filing"}:
+            documents = (
+                PDFDocumentInput(
+                    document_id="ACME_2022_10K",
+                    content=make_pdf(
+                        "Revenue from licensing agreements was 1200. " + "Distribution channels overview. " * 80
+                    ),
+                ),
+                PDFDocumentInput(
+                    document_id="ACME_2015_10K" if interference == "latest-report" else "ACME_2023_10Q",
+                    content=make_pdf(*(discussion for _ in range(24))),
+                ),
+            )
+            question = (
+                "What revenue did ACME report?"
+                if interference == "latest-report"
+                else "What is ACME's revenue in this 10K?"
+            )
             expected_page = 1
         elif interference == "future-maturity":
             documents = (
@@ -557,5 +623,58 @@ def test_evidence_survives_other_years_continued_tables_and_generic_financial_te
                     found.add(locations[record.entry.sources[0].source_id])
                 assert len(citations) == len(found) <= 20
                 assert ("ACME_2022_10K", expected_page) in found
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    "document_id,alias",
+    [("RIVERSTONE_2022_10K", "RIV"), ("CEDAR_HILL_2022_10K", "CnH"), ("opaque-42", "NEX")],
+)
+def test_company_abbreviations_link_to_report_identity_before_topic_ranking(tmp_path, document_id, alias):
+    async def scenario():
+        config = BuiltinConfig(database=SQLiteConfig(url=f"sqlite+aiosqlite:///{tmp_path / 'aliases.db'}"))
+        registry = SourceDefinitionRegistry((PDF_PAGE_SOURCE_DEFINITION,))
+        documents = (
+            PDFDocumentInput(
+                document_id=document_id,
+                content=make_pdf(
+                    "Annual report fiscal year 2022",
+                    "Contents",
+                    "Overview",
+                    f"The company also trades as {alias}.",
+                    "Our major products and services include enterprise processors and storage systems.",
+                ),
+            ),
+            PDFDocumentInput(
+                document_id="OTHER_2022_10K",
+                content=make_pdf(*("Major products and services 2022 processors storage systems." for _ in range(24))),
+            ),
+        )
+        locations = {}
+        async with open_builtin_runtime(config, candidate_pipeline=PageEvidencePipeline()) as runtime:
+            assert runtime.scopes is not None
+            scope = await runtime.scopes.create(
+                ScopeDraft(title="Reports", summary="aliases", idempotency_key="aliases")
+            )
+            await runtime.ingestion.register(manifest_for_definition(PDF_PAGE_SOURCE_DEFINITION))
+            for document in documents:
+                for page in parse_pdf_document(document):
+                    observation = project_source_for_transport(registry, await registry.resolve(page))
+                    locations[observation.name] = (page.document_id, page.page_number)
+                    await runtime.ingestion.submit(
+                        SubmitSourceObservation(scope_id=scope.scope_id, observation=observation)
+                    )
+            await flush_all(runtime.memory.for_scope(scope.scope_id), len(locations))
+        async with open_builtin_runtime(config) as runtime:
+            memory = runtime.memory.for_scope(scope.scope_id)
+            citations = await search_pdf_pages(
+                memory, f"What are {alias}'s major products and services in FY22?", limit=20
+            )
+            found = set()
+            for citation in citations:
+                record = await memory.get(GetMemoryEntryRequest(citation=citation))
+                found.add(locations[record.entry.sources[0].source_id])
+            assert (document_id, 5) in found
 
     asyncio.run(scenario())
