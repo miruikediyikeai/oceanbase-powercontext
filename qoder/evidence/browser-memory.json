@@ -1,0 +1,131 @@
+{
+  "exported_at": "2026-11-02T07:19:10.769Z",
+  "scope_id": "scp_7tjg6p9qqryws4dcgt9v5hxj3t",
+  "stats": {
+    "total": 6,
+    "due": 5,
+    "weak": 1,
+    "reviews": 1
+  },
+  "memory": [
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_15ef738d896f4cbf8c4f1c0b0e9abe4f",
+        "entry_version_id": "mem_ver_c3599343013747009dc7ee0c4a9cf110"
+      },
+      "version": 1,
+      "kind": "recall_card_v1",
+      "text": "{\"id\":\"db-index\",\"topic\":\"索引与查询\",\"question\":\"为什么索引通常能加快查询，却会增加写入成本？\",\"answer\":\"索引维护了可快速定位记录的数据结构，减少查询扫描量；插入、更新或删除时也要同步维护索引，因此增加写入和存储成本。\",\"source\":\"项目自编学习样例：索引\",\"schema_version\":1,\"repetitions\":0,\"lapses\":0,\"streak\":0,\"interval_days\":0,\"due_at\":\"2026-11-02T07:17:51.503927Z\",\"last_reviewed_at\":null,\"last_rating\":null}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    },
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_7086a7f120d54056a802ff5769892795",
+        "entry_version_id": "mem_ver_7b0e3180400a41409653567ba41756f4"
+      },
+      "version": 1,
+      "kind": "recall_card_v1",
+      "text": "{\"id\":\"db-isolation\",\"topic\":\"数据库基础\",\"question\":\"脏读和不可重复读有什么区别？\",\"answer\":\"脏读是读到了其他事务尚未提交的数据；不可重复读是在同一事务中多次读取同一记录，结果因其他事务已提交的更新而变化。\",\"source\":\"项目自编学习样例：隔离\",\"schema_version\":1,\"repetitions\":0,\"lapses\":0,\"streak\":0,\"interval_days\":0,\"due_at\":\"2026-11-02T07:17:51.564113Z\",\"last_reviewed_at\":null,\"last_rating\":null}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    },
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_8900725fb32a42fcacfc3ac104ad23d4",
+        "entry_version_id": "mem_ver_5aa7241308cc4edb9bff13940d9476f2"
+      },
+      "version": 1,
+      "kind": "recall_preferences_v1",
+      "text": "{\"schema_version\":1,\"name\":\"小林\",\"daily_limit\":2}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    },
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_9ad143c2e3cf4ecab41eff9c2aa27e24",
+        "entry_version_id": "mem_ver_bacd189c306e4fe080dcc56ae61bd1cf"
+      },
+      "version": 1,
+      "kind": "recall_card_v1",
+      "text": "{\"id\":\"review-spacing\",\"topic\":\"学习方法\",\"question\":\"完成一次复习后，为什么还需要安排下一次复习？\",\"answer\":\"一次答对不能证明长期掌握。间隔复习通过后续检索练习帮助巩固记忆。本项目根据用户自评，以 10 分钟、1 天或逐步翻倍的间隔安排下一次复习。\",\"source\":\"项目自编学习样例：间隔复习；规则为原型启发式\",\"schema_version\":1,\"repetitions\":0,\"lapses\":0,\"streak\":0,\"interval_days\":0,\"due_at\":\"2026-11-02T07:17:51.711114Z\",\"last_reviewed_at\":null,\"last_rating\":null}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    },
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_b06012f0843242d3b2105ae6b91b4218",
+        "entry_version_id": "mem_ver_d4c912348cfe41949955b3237a60eeb5"
+      },
+      "version": 1,
+      "kind": "recall_card_v1",
+      "text": "{\"id\":\"retrieval-hybrid\",\"topic\":\"检索系统\",\"question\":\"全文检索与向量检索各自适合什么场景？\",\"answer\":\"全文检索适合关键词、术语或精确表达；向量检索利用嵌入表示匹配语义相近的内容。混合检索可以结合两类信号，但效果需要用实际任务评估。\",\"source\":\"项目自编学习样例：检索方式\",\"schema_version\":1,\"repetitions\":0,\"lapses\":0,\"streak\":0,\"interval_days\":0,\"due_at\":\"2026-11-02T07:17:51.615266Z\",\"last_reviewed_at\":null,\"last_rating\":null}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    },
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_c0cc7df8019a4ccb9258aa9259cf2f47",
+        "entry_version_id": "mem_ver_78678d7a69d0427e9d661f15c370f585"
+      },
+      "version": 1,
+      "kind": "recall_card_v1",
+      "text": "{\"id\":\"memory-context\",\"topic\":\"上下文工程\",\"question\":\"跨会话记忆与当前对话上下文有什么不同？\",\"answer\":\"当前对话上下文是一次交互中可见的信息；跨会话记忆经持久化保存，可被后续交互读取。本项目把复习偏好和卡片状态保存在 PowerContext，并在重新打开时复用。\",\"source\":\"项目自编学习样例：上下文与持久记忆\",\"schema_version\":1,\"repetitions\":0,\"lapses\":0,\"streak\":0,\"interval_days\":0,\"due_at\":\"2026-11-02T07:17:51.663933Z\",\"last_reviewed_at\":null,\"last_rating\":null}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    },
+    {
+      "citation": {
+        "memory_ref": {
+          "family": "memory",
+          "artifact_id": "memory",
+          "revision": 8
+        },
+        "entry_id": "mem_ent_fc550e15912d4b16a1981e643bfce3c1",
+        "entry_version_id": "mem_ver_2b8e80d2ce514d119cb4618a69ce47cf"
+      },
+      "version": 2,
+      "kind": "recall_card_v1",
+      "text": "{\"id\":\"db-acid\",\"topic\":\"数据库基础\",\"question\":\"数据库事务的 ACID 分别代表什么？\",\"answer\":\"原子性（Atomicity）、一致性（Consistency）、隔离性（Isolation）、持久性（Durability）。原子性确保事务整体提交或回滚，持久性确保提交后的结果不因故障丢失。\",\"source\":\"项目自编学习样例：事务与 ACID\",\"schema_version\":1,\"repetitions\":1,\"lapses\":1,\"streak\":0,\"interval_days\":0,\"due_at\":\"2026-11-02T07:27:51.958348Z\",\"last_reviewed_at\":\"2026-11-02T07:17:51.958348Z\",\"last_rating\":\"again\"}",
+      "state": "active",
+      "source_refs": [],
+      "artifact_refs": []
+    }
+  ]
+}

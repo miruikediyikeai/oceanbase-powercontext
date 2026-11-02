@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>拾忆 Recall · 让每一次复习接得上</title>
+  <meta name="description" content="保存知识卡片与学习进度，从上一次的薄弱点继续复习。">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-icon">拾</span><span>拾忆 <small>RECALL</small></span></a>
+    <div class="workspace-label">PERSONAL WORKSPACE</div>
+    <nav aria-label="主导航">
+      <button class="nav active" data-view="today"><span>◉</span> 今日复习 <span class="nav-count" id="nav-due">0</span></button>
+      <button class="nav" data-view="library"><span>▤</span> 知识卡片</button>
+      <button class="nav" data-view="memory"><span>◇</span> 学习记忆</button>
+      <button class="nav" data-view="settings"><span>⚙</span> 复习偏好</button>
+    </nav>
+    <div class="sidebar-bottom"><span class="status-dot" id="connection-dot"></span><span id="connection">正在连接学习记忆</span><small>POWERED BY POWERCONTEXT</small></div>
+  </aside>
+  <main>
+    <header class="topbar"><span>我的学习空间 <span class="slash">/</span> <span id="breadcrumb">今日复习</span></span><span class="local-badge">个人本地工作区</span></header>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="view" id="view-today">
+      <div class="page-heading"><div><p class="eyebrow" id="today-date">LET'S MAKE IT STICK</p><h1>让每一次复习，<em>接得上。</em></h1><p class="subtitle" id="greeting">从上一次的进度继续，把学过的变成记得的。</p></div><button class="button secondary" id="refresh">↻ 刷新进度</button></div>
+      <div class="metrics">
+        <article><span>待复习卡片</span><strong id="stat-due">—</strong><small>已到复习时间</small></article>
+        <article><span>需要再巩固</span><strong id="stat-weak">—</strong><small>依据最近一次自评</small></article>
+        <article><span>累计复习</span><strong id="stat-reviews">—</strong><small>每次进步都有记录</small></article>
+        <article><span>我的知识卡片</span><strong id="stat-total">—</strong><small>带上来源，学得扎实</small></article>
+      </div>
+      <div class="study-grid">
+        <div><div class="section-heading"><h2>今天，从这里开始</h2><span id="plan-count">正在读取计划</span></div><div id="study-area" class="study-card"><div class="empty"><span class="empty-symbol">✳</span><h2>正在读取学习进度</h2><p>连接 PowerContext，找回上一次的记忆。</p></div></div></div>
+        <aside class="context-panel"><span class="mini-label">A LITTLE, EVERY DAY</span><h2>记得你的节奏。</h2><p>不必每次从头开始。薄弱点、复习进度和偏好，都会陪你进入下一次学习。</p><div class="steps"><div><b>01</b><span>先回忆，再看答案</span></div><div><b>02</b><span>诚实自评，安排下一次</span></div><div><b>03</b><span>保存记忆，随时接着学</span></div></div><div class="context-foot"><span class="status-dot"></span> 学习状态由 PowerContext 持久保存</div></aside>
+      </div>
+      <div class="section-heading lower"><h2>待复习清单</h2><span>薄弱卡片优先 · 仅显示到期卡片</span></div><div id="plan-list" class="card-list"></div>
+    </section>
+    <section class="view" id="view-library" hidden>
+      <div class="page-heading"><div><p class="eyebrow">YOUR KNOWLEDGE, CONNECTED</p><h1>把知识，<em>收进卡片。</em></h1><p class="subtitle">问题、答案与出处，一起保存。支持导入 JSON，最多 100 张。</p></div><div class="actions"><button class="button secondary" id="load-sample">导入示例卡片</button><label class="button primary" for="file-import">＋ 导入 JSON</label><input type="file" id="file-import" accept=".json,application/json" hidden></div></div>
+      <label class="search-box"><span>⌕</span><input type="search" id="search" placeholder="筛选问题、主题或来源" aria-label="筛选知识卡片"></label><div id="library-list" class="library-grid"></div>
+    </section>
+    <section class="view" id="view-memory" hidden>
+      <div class="page-heading"><div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h1>学过的，<em>有迹可循。</em></h1><p class="subtitle">这里展示实际读取的 PowerContext 记忆，包括版本与引用。</p></div><button class="button secondary" id="export-memory">↓ 导出记忆证据</button></div>
+      <div class="memory-banner"><span class="brand-icon">◇</span><div><b>同一学习空间，跨次复习延续</b><p>关闭页面再回来，复习次数、下一次时间和偏好仍会从 PowerContext 读回。</p><code id="scope-id">尚未连接</code></div></div><div id="memory-list"></div>
+    </section>
+    <section class="view" id="view-settings" hidden>
+      <div class="page-heading"><div><p class="eyebrow">AT YOUR OWN PACE</p><h1>找到自己的<em>学习节奏。</em></h1><p class="subtitle">偏好会保存为记忆，用于之后的复习计划。</p></div></div>
+      <form class="settings-card" id="preferences-form"><label for="learner-name">怎么称呼你<input id="learner-name" maxlength="32" required autocomplete="nickname"></label><label for="daily-limit">每轮最多复习几张<input type="number" id="daily-limit" min="1" max="20" required><small>每次计划从到期卡片中挑选 1–20 张。</small></label><button class="button primary" type="submit">保存学习偏好</button></form>
+    </section>
+    <footer>拾忆 RECALL <span>让知识留下来，让学习继续。</span><a href="/docs" target="_blank" rel="noopener">API 文档 ↗</a></footer>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

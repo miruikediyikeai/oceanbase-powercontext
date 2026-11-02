@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="拾忆 Recall：用 PowerContext 保存知识卡片、薄弱点与学习偏好，让每一次复习接得上。">
+<title>拾忆 Recall · 让每一次复习接得上</title>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f7f8f3;color:#304433;font:15px/1.8 'Microsoft YaHei',system-ui,sans-serif}a{color:inherit;text-decoration:none}nav,main,footer{max-width:1120px;margin:auto;padding:25px 35px}nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dfe6d8}nav strong{font-size:23px;letter-spacing:3px}nav span{font-size:11px;letter-spacing:2px;color:#91a181}nav a{font-size:12px}.hero{padding:80px 0 60px;max-width:800px}.eyebrow{font-size:10px;letter-spacing:4px;color:#7e9769}h1{font-size:53px;line-height:1.4;font-weight:500;letter-spacing:2px;margin:20px 0}h1 em{font-style:normal;color:#82a065}.lead{font-size:16px;color:#7c8c73;max-width:660px}.button{display:inline-block;background:#42644a;color:white;padding:12px 22px;border-radius:5px;font-size:12px;margin:20px 10px 0 0}.secondary{color:#42644a;background:#e8eede}.screenshot{padding:12px;background:white;border:1px solid #e0e6d9;border-radius:12px;box-shadow:0 20px 60px #4f6d3710}.screenshot img{display:block;width:100%;border-radius:5px}.caption{font-size:10px;color:#93a187;margin:12px 0 0}section{margin:65px 0}h2{font-size:27px;font-weight:500;margin:10px 0 20px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.feature{padding:25px;border:1px solid #dfe6d8;border-radius:8px;background:#fff}.feature b{color:#8da37b;font-family:Georgia,serif;font-size:24px}.feature h3{font-size:16px;font-weight:500}.feature p{font-size:12px;color:#85917d}.flow{background:#eaf0e1;border-radius:10px;padding:30px}.flow p{font-size:13px;color:#74866a}.code{background:#fff;border:1px solid #dce5d4;padding:20px;border-radius:6px;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}li{font-size:13px;margin:9px 0;color:#74846a}.note{font-size:12px;color:#8a947f}footer{border-top:1px solid #dfe6d8;color:#8c9a81;font-size:10px;display:flex;justify-content:space-between}.links{display:flex;gap:20px;flex-wrap:wrap}.links a{text-decoration:underline;text-underline-offset:4px;font-size:13px}@media(max-width:700px){nav,main,footer{padding:20px}.hero{padding:45px 0 30px}h1{font-size:35px}.lead{font-size:14px}.grid{grid-template-columns:1fr}.feature{padding:20px}section{margin:45px 0}nav span{display:none}.flow{padding:20px}}
+</style>
+</head>
+<body>
+<nav><strong>拾忆 <span>RECALL</span></strong><a href="#how">如何体验 ↗</a></nav>
+<main>
+<div class="hero"><p class="eyebrow">A LITTLE, EVERY DAY</p><h1>学过的知识，<br>值得<em>好好记住。</em></h1><p class="lead">笔记记了很多，复习却总是从头开始？拾忆把知识整理成带来源的卡片，记住你的薄弱点和进度。下一次回来，从上一次继续。</p><a class="button" href="#how">了解运行与验证 →</a><a class="button secondary" href="#memory">看看记忆如何工作</a></div>
+<div class="screenshot"><img src="preview.png" alt="拾忆真实运行截图：今日复习、待复习卡片、薄弱点与学习计划"><p class="caption">个人本地工作区 · 实际运行截图</p></div>
+<section><p class="eyebrow">SMALL STEPS, LASTING KNOWLEDGE</p><h2>让复习成为一个完整的小循环。</h2><div class="grid"><article class="feature"><b>01</b><h3>把知识收进卡片</h3><p>导入问题、答案、主题与出处。自编数据库示例可直接体验，也可以导入自己的 JSON 卡片。</p></article><article class="feature"><b>02</b><h3>先回忆，再诚实自评</h3><p>看完答案，选择未记住、模糊或记住。明确规则决定下次时间，已到期的薄弱卡片优先安排。</p></article><article class="feature"><b>03</b><h3>下次学习，接得上</h3><p>偏好和学习状态保存到 PowerContext。关闭页面、重启应用后，仍能读回原来的进度。</p></article></div></section>
+<section id="memory" class="flow"><p class="eyebrow">POWERED BY POWERCONTEXT</p><h2>记忆真正参与下一次复习。</h2><p>保存的不是一句“你学过了”，而是可核对的卡片状态：复习次数、最近自评、遗忘次数和下次复习时间。计划读取这些状态和偏好，再决定今天展示哪些卡片。</p><pre class="code">用户自评 → PowerContext Memory 新版本
+重新打开 → 同一 Scope 读取卡片与偏好
+复习规则 → 筛选到期卡片 → 优先薄弱点
+学习记忆页 → 查看引用、版本与导出证据</pre><p>采用实际 PowerContext HTTP 服务及其 SQLite 持久化后端，无需模型 API。此版本提供规则驱动复习，不做自动判分。</p></section>
+<section id="how"><p class="eyebrow">TRY IT, VERIFY IT</p><h2>从一组可复现样例开始。</h2><ol><li>打开源码仓库的 qoder/README.md，安装依赖并启动 PowerContext 与应用。</li><li>导入 6 张示例卡片，完成一次自评，保存每轮卡片数偏好。</li><li>查看实际记忆记录，重启两个服务，核对状态保持一致。</li><li>运行 verify.py，检查真实 HTTP、引用读回、版本冲突和重启恢复证据。</li></ol><div class="links"><a href="https://github.com/miruikediyikeai/oceanbase-powercontext/tree/codex/qoder-studycoach/qoder">项目源码与运行说明 ↗</a><a href="https://github.com/oceanbase/powercontext">PowerContext ↗</a></div><p class="note">源码链接对应开发分支，推送后可访问。当前体验方式为本地运行，暂未提供公开在线学习后端。本介绍页是供 Qoder Sites 发布的静态资产。</p></section>
+<section><h2>用可核对的结果说话。</h2><p class="note">项目提供合成样例和实际服务验证流程。当前未收集真实用户规模、学习效果或时间节省数据，不用演示数据替代真实使用效果。</p><p class="note">开发来源：Codex 原型。后续 Qoder 主要开发记录、账号 UID 与 Sites 发布结果需按实际完成情况补充。</p></section>
+</main><footer><span>拾忆 RECALL · 让每一次复习接得上</span><span>Qoder × OceanBase 项目原型</span></footer>
+</body>
+</html>

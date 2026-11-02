@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "executed_at": "2026-11-02T07:19:12.263Z",
+  "browser": "Microsoft Edge via Playwright",
+  "checks": [
+    "sample_import_via_ui",
+    "self_rating_saved",
+    "preferences_applied",
+    "page_reload_restores_memory",
+    "memory_export_has_real_citations",
+    "invalid_json_error",
+    "duplicate_import_preserves_progress",
+    "mobile_has_no_horizontal_overflow",
+    "no_javascript_page_errors",
+    "site_preview_image_loaded"
+  ],
+  "viewports": [
+    [
+      1440,
+      1000
+    ],
+    [
+      390,
+      844
+    ]
+  ]
+}

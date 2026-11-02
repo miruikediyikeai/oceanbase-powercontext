@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "started_at": "2026-11-02T07:14:01.661328+00:00",
+  "finished_at": "2026-11-02T07:15:31.319538+00:00",
+  "python": "3.13.9",
+  "powercontext_version": "1.2.0",
+  "execution": "real localhost HTTP services, SQLite backend owned by PowerContext; no mocks",
+  "checks": [
+    "sample_import_and_repeat_without_duplicates",
+    "conflicting_content_and_duplicate_identity_rejected",
+    "review_written_and_stale_repeat_rejected",
+    "preferences_change_plan_and_not_due_card_is_excluded",
+    "exact_citation_read_back_from_real_powercontext_http",
+    "both_processes_restarted_same_scope_preferences_progress_and_citations_restored",
+    "separate_learner_scope_has_no_inherited_cards",
+    "backend_unavailable_is_reported_without_fabricated_memory"
+  ],
+  "stats": {
+    "total": 6,
+    "due": 5,
+    "weak": 1,
+    "reviews": 1
+  },
+  "scope_id": "scp_41z2tgz189fd8sqf646z760hwz",
+  "review_citation": {
+    "memory_ref": {
+      "family": "memory",
+      "artifact_id": "memory",
+      "revision": 7
+    },
+    "entry_id": "mem_ent_3e2abf066ea84b919f1e99904f80c31c",
+    "entry_version_id": "mem_ver_41316794e33d420a80087911d278dab5"
+  },
+  "saved_review": {
+    "id": "db-acid",
+    "topic": "数据库基础",
+    "question": "数据库事务的 ACID 分别代表什么？",
+    "answer": "原子性（Atomicity）、一致性（Consistency）、隔离性（Isolation）、持久性（Durability）。原子性确保事务整体提交或回滚，持久性确保提交后的结果不因故障丢失。 Unicode readback: café.",
+    "source": "项目自编学习样例：事务与 ACID",
+    "schema_version": 1,
+    "repetitions": 1,
+    "lapses": 1,
+    "streak": 0,
+    "interval_days": 0,
+    "due_at": "2026-11-02T07:25:18.342392Z",
+    "last_reviewed_at": "2026-11-02T07:15:18.342392Z",
+    "last_rating": "again"
+  },
+  "usage_effects": "Synthetic verification only; no real-user efficiency claim."
+}
