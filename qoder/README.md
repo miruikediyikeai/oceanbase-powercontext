@@ -60,7 +60,7 @@ POWERCONTEXT_URL=http://127.0.0.1:8000 RECALL_LEARNER=demo \
   .venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8080
 ```
 
-以上是跨平台运行方式；本仓库的执行证据以 `evidence/verification.json` 记录的实际环境为准。
+以上是跨平台运行方式。Windows 证据以 `evidence/verification.json` 记录的实际环境为准；Linux 安装在 WSL2 Ubuntu 22.04 / CPython 3.12 实际执行过（`python -m venv` + `pip install -r requirements*.txt`，14 项测试、ruff 与真实 PowerContext 读写全部通过），见 `evidence/linux-verification.json`。
 
 ### 配置
 
@@ -128,7 +128,7 @@ qoder/
 
 ## 赛道交付状态
 
-可运行原型（卡片导入、间隔复习、偏好与记忆复用）由 Codex 完成；笔记转卡片、单卡复习历史与周汇总在 Qoder 中开发，并通过实际 PowerContext 验证与浏览器级检查。开发证据见 `evidence/`，Qoder 开发过程对应的任务书见 [docs/QODER_TASKS.md](docs/QODER_TASKS.md)，提交材料见 [docs/SUBMISSION.md](docs/SUBMISSION.md)。Qoder Sites 介绍页发布地址以实际发布结果为准。
+可运行原型（卡片导入、间隔复习、偏好与记忆复用）由 Codex 完成；笔记转卡片、单卡复习历史与周汇总在 Qoder 中开发，并通过实际 PowerContext 验证与浏览器级检查。开发证据见 `evidence/`，Qoder 开发过程对应的任务书见 [docs/QODER_TASKS.md](docs/QODER_TASKS.md)，提交材料见 [docs/SUBMISSION.md](docs/SUBMISSION.md)。代码已推送到仓库 `2026-competition-ecosystem` 分支（HEAD 以分支页为准，与本地 `codex/qoder-studycoach` 分支内容完全一致；因网络对 git 智能协议传输的阻断，经 GitHub Git Database API 推送，远程提交日期规范化为 UTC）。Qoder Sites 介绍页已发布并对任何人开放：https://shiyi-recall-zoprrpyewzu.qoder.zone。
 
 ## 来源
 

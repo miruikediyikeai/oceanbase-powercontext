@@ -1,0 +1,27 @@
+{
+  "platform": "linux (WSL2 Ubuntu 22.04, CPython 3.12)",
+  "steps": [
+    "python -m venv + pip install -r requirements.txt -r requirements-dev.txt",
+    "pytest (14 tests)",
+    "ruff check + format --check",
+    "real PowerContext HTTP + app HTTP started on localhost",
+    "imported sample cards via /api/import",
+    "workspace read back cards from PowerContext"
+  ],
+  "pytest": "passed",
+  "ruff": "passed",
+  "imported": {
+    "added": 6,
+    "skipped": 0,
+    "scope_id": "scp_6yvvmyy1k6n8w7h6fe5db2q91r"
+  },
+  "workspace_stats": {
+    "total": 6,
+    "due": 6,
+    "weak": 0,
+    "reviews": 0
+  },
+  "scope_id": "scp_6yvvmyy1k6n8w7h6fe5db2q91r",
+  "learner": "linux-verify",
+  "python": "3.12.16"
+}

@@ -24,11 +24,11 @@
 
 | 材料 | 当前状态 | 完成方式 |
 | --- | --- | --- |
-| Qoder 主要开发记录 | 以 `evidence/` 与本次会话为准 | 在 Qoder 执行真实功能开发，保留对话和测试截图/录屏 |
+| Qoder 主要开发记录 | 截图已保存 | `evidence/qoder-dev-01.png`、`qoder-dev-02.png`（Qoder 应用内开发对话实拍，已核对不含凭据）；录屏如需再补 |
 | Qoder 账号 UID | 尚未提供 | 从实际个人账号中获取 |
-| Qoder Sites 完整网址 | 尚未发布 | 用个人账号创建和发布，设为任何人可访问 |
+| Qoder Sites 完整网址 | 已发布 | https://shiyi-recall-zoprrpyewzu.qoder.zone（可见范围：任何人可访问，已匿名核验 200） |
 | 无痕访问验证 | 尚未执行 | 未登录状态打开正式 Sites URL |
-| 提交 commit hash | 尚未提交 | 将项目提交到指定分支后填写真实 hash |
+| 提交 commit hash | 已推送 | `2026-competition-ecosystem` 分支（HEAD 以分支页为准）；因网络限制 git 智能协议传输被阻断（403），经 GitHub Git Database API 推送，提交日期被平台规范化为 UTC，分支内容与本地 `codex/qoder-studycoach`（主体提交 `3f0442e0`）完全一致但 SHA 不同 |
 | 真实用户效果 | 尚未收集 | 自愿试用、脱敏反馈与原始统计；不以合成验证代替 |
 
 ## 平台填写内容
@@ -38,4 +38,4 @@
 - 指定技术：PowerContext 1.2.0；保存知识卡片、学习状态和偏好，历史版本驱动复习回顾。
 - 代码路径：仓库 `qoder/` 目录。
 - 运行和复现：`qoder/README.md`。
-- 网站、仓库最终分支/commit、Qoder UID：以真实发布与提交结果填写，不使用占位地址。
+- 网站、仓库最终分支/commit、Qoder UID：网站为 https://shiyi-recall-zoprrpyewzu.qoder.zone；仓库为 `2026-competition-ecosystem` 分支（HEAD 以分支页为准）；Qoder UID 由本人从账号页面填写。
