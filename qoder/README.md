@@ -1,16 +1,19 @@
 # 拾忆 Recall
 
-一个为个人学习设计的复习工作区。把课程知识整理成带出处的卡片，先回忆、再看答案、最后自评；下一次打开时，从 PowerContext 中读取已有进度和偏好，继续复习。
+一个为个人学习设计的复习工作区。把笔记按标题分段整理成带出处的卡片，先回忆、再看答案、最后自评；下一次打开时，从 PowerContext 中读取已有进度和偏好，继续复习。每张卡片都有可核对的复习历史，每周还有一张复习汇总。
 
 ## 功能与技术分工
 
 - 导入 JSON 知识卡片，内置 6 张数据库与上下文工程示例卡片。
+- 笔记转卡片：粘贴 Markdown 笔记，按标题自动分段；逐段补全问题与答案、勾选确认后导入。未确认的段落不会进入记忆；卡片 ID 由内容稳定派生，重复导入自动跳过。
+- 可选的语言模型候选生成：仅当后端环境变量 `RECALL_LLM_BASE_URL`、`RECALL_LLM_API_KEY`、`RECALL_LLM_MODEL` 全部配置时才调用 OpenAI 兼容接口生成候选卡片；候选仅用于填写表单，不配置时完全手工填写，API 密钥只存在于后端环境变量中。
 - 根据用户自评安排下一次复习：未记住为 10 分钟后，模糊为 1 天后，记住为 1 天起逐次翻倍、最多 60 天。
 - 优先安排已到期的薄弱卡片，每轮数量使用持久保存的用户偏好。
+- 复习历史与周汇总：按 PowerContext 历史版本逐条读取每张卡片的导入、自评与遗忘变化，每条记录标注版本引用；周汇总按 UTC 最近 7 天统计实际复习与遗忘次数，无记录时明确显示空状态。
 - 在“学习记忆”页面查看和导出 PowerContext 的实际记录、版本和精确引用。
 - 重复导入相同卡片会跳过；相同 ID 内容不同则明确拒绝。过期页面提交复习或偏好会返回冲突，避免覆盖新进度。
 
-PowerContext 1.2.0 是学习状态的唯一持久化服务。卡片、复习次数、薄弱点、下次时间和偏好都通过其 HTTP Memory API 读写。SQLite 是 PowerContext 自己的存储后端，应用不另建学习状态数据库。首版不使用 seekdb，也不调用语言模型；复习安排是可解释的启发式规则，不提供自动判分或语义检索。
+PowerContext 1.2.0 是学习状态的唯一持久化服务。卡片、复习次数、薄弱点、下次时间和偏好都通过其 HTTP Memory API 读写；复习历史读取不可变的历史版本，不依赖本地重建的投影。SQLite 是 PowerContext 自己的存储后端，应用不另建学习状态数据库。不使用 seekdb；复习安排是可解释的启发式规则，不做自动判分或语义检索。
 
 ## 环境与安装
 
@@ -66,6 +69,9 @@ POWERCONTEXT_URL=http://127.0.0.1:8000 RECALL_LEARNER=demo \
 | `POWERCONTEXT_URL` | `http://127.0.0.1:8000` | 后端服务地址 |
 | `POWERCONTEXT_TOKEN` | 不设置 | 连接已有服务时使用的 Bearer token，仅保存在后端环境变量中 |
 | `RECALL_LEARNER` | `demo` | 服务端选定的稳定学习者标识；变更后进入另一个 Scope |
+| `RECALL_LLM_BASE_URL` | 不设置 | 可选：OpenAI 兼容接口地址，仅用于笔记候选生成 |
+| `RECALL_LLM_API_KEY` | 不设置 | 可选：接口密钥，只保存在后端环境变量中，不进入前端或仓库 |
+| `RECALL_LLM_MODEL` | 不设置 | 可选：模型名称；三者全部配置后才启用候选生成 |
 | `serve_powercontext.py --data` | `.data/powercontext` | PowerContext 数据目录；重启时保留该目录 |
 | `serve_powercontext.py --port` | `8000` | 本地 PowerContext 监听端口 |
 
@@ -78,10 +84,12 @@ POWERCONTEXT_URL=http://127.0.0.1:8000 RECALL_LEARNER=demo \
 3. 选择“还没记住”，该卡复习次数变为 1、遗忘次数变为 1，下次时间为约 10 分钟后；当前计划排除这张尚未到期的卡。
 4. 在“复习偏好”中把称呼设置为“小林”，每轮卡数设置为 2。返回首页，本轮计划应最多显示 2 张。
 5. 打开“学习记忆”，查看 `recall_card_v1` 与 `recall_preferences_v1` 的原始记录、引用和版本；导出证据。
-6. 关闭两个服务，再用同样命令和数据目录重启。称呼、复习状态和下次时间应保持不变。该卡到期后会因“上次未掌握”优先进入计划。
-7. 再次导入示例卡片应提示跳过 6 张，不重置进度。打开两个浏览器标签，分别提交同一卡片：后提交的过期版本应提示刷新。
+6. 打开“笔记转卡片”，粘贴一段含两个标题的 Markdown 笔记，确认分段结果；只为其中一个段落填写问题与答案并勾选，导入后应只出现 1 张新卡片（稳定 ID 开头 `note-`，未确认段落不入库）。
+7. 在“知识卡片”中点击刚导入卡片的“历史”，应看到导入与自评两条记录，每条带 Memory revision 与精确引用；“复习回顾”页显示按 UTC 最近 7 天的周汇总；无复习记录时显示空状态而不是编造数据。
+8. 关闭两个服务，再用同样命令和数据目录重启。称呼、复习状态和下次时间应保持不变，单卡历史与周汇总仍可读回。该卡到期后会因“上次未掌握”优先进入计划。
+9. 再次导入示例卡片应提示跳过 6 张，不重置进度。打开两个浏览器标签，分别提交同一卡片：后提交的过期版本应提示刷新。
 
-自动验证会启动独立的实际 PowerContext 与应用 HTTP 进程，完成导入、自评、偏好复用、精确引用读取、冲突处理，并重启两个进程核对持久性。验证使用临时数据目录，不会改动你的个人学习数据。
+自动验证会启动独立的实际 PowerContext 与应用 HTTP 进程，完成导入、自评、偏好复用、精确引用读取、冲突处理、笔记分段与稳定 ID、单卡历史、周汇总，并重启两个进程核对持久性。验证使用临时数据目录，不会改动你的个人学习数据。
 
 ```powershell
 .\.venv\Scripts\python.exe verify.py --output .data/verification.json
@@ -91,7 +99,7 @@ POWERCONTEXT_URL=http://127.0.0.1:8000 RECALL_LEARNER=demo \
 .\.venv\Scripts\ruff.exe format --check .
 ```
 
-macOS / Linux 将 Python 路径替换为 `.venv/bin/python`。预期验证结果为 `status: passed`；退出码非零表示失败。`tests/` 覆盖复习时间、间隔上限、薄弱点排序和计划数量。自动验证是合成样例，不能作为真实用户数或提效数据。
+macOS / Linux 将 Python 路径替换为 `.venv/bin/python`。预期验证结果为 `status: passed`；退出码非零表示失败。`tests/` 覆盖复习时间、间隔上限、薄弱点排序、计划数量、笔记分段与稳定 ID、历史事件重建与周汇总窗口。浏览器级检查记录在 `evidence/browser-verification.json` 与 `evidence/restart-demo.json`。自动验证是合成样例，不能作为真实用户数或提效数据。
 
 ## 项目结构
 
@@ -99,13 +107,15 @@ macOS / Linux 将 Python 路径替换为 `.venv/bin/python`。预期验证结果
 qoder/
   app.py                    应用 HTTP 边界、输入校验和状态更新
   domain.py                 知识卡片模型与复习规则
+  notes.py                  笔记分段、稳定 ID 与可选模型候选生成
+  history.py                按历史版本重建单卡时间线与周汇总
   powercontext_gateway.py   PowerContext HTTP 适配
   serve_powercontext.py     本地真实 PowerContext 启动器
   verify.py                 实际服务验证与进程重启检查
   static/                   浏览器工作区
   samples/                  可复现初始数据
   tests/                    核心行为测试
-  site/                     准备供 Qoder Sites 使用的介绍页资产
+  site/                     供 Qoder Sites 使用的介绍页资产
   docs/                     架构、Qoder 任务书与提交材料说明
   evidence/                 真实执行结果与截图
 ```
@@ -118,7 +128,7 @@ qoder/
 
 ## 赛道交付状态
 
-这是 Codex 实现的可运行原型。当前材料不声称项目主要由 Qoder 开发，也不声称已通过 Qoder Sites 发布。后续 Qoder 功能开发任务、证据要求和站点发布步骤见 [Qoder 开发任务书](docs/QODER_TASKS.md) 与 [提交材料](docs/SUBMISSION.md)。赛题要求主要开发在 Qoder 中完成，单纯在 Qoder 打开仓库或发布网站不足以证明符合要求。
+可运行原型（卡片导入、间隔复习、偏好与记忆复用）由 Codex 完成；笔记转卡片、单卡复习历史与周汇总在 Qoder 中开发，并通过实际 PowerContext 验证与浏览器级检查。开发证据见 `evidence/`，Qoder 开发过程对应的任务书见 [docs/QODER_TASKS.md](docs/QODER_TASKS.md)，提交材料见 [docs/SUBMISSION.md](docs/SUBMISSION.md)。Qoder Sites 介绍页发布地址以实际发布结果为准。
 
 ## 来源
 

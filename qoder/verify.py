@@ -14,6 +14,8 @@ from pathlib import Path
 
 import httpx
 
+from notes import stable_card_id
+
 ROOT = Path(__file__).resolve().parent
 
 
@@ -144,6 +146,58 @@ def run_verification(directory):
             assert restored["cards"] == saved["cards"]
             assert restored["stats"] == saved["stats"]
             checks.append("both_processes_restarted_same_scope_preferences_progress_and_citations_restored")
+            # Notes-to-cards: segmentation, hand-fill path, stable identity, exact history.
+            note = (
+                "# 事务\n\n"
+                "原子性确保事务整体提交或回滚，不会出现只完成一半的状态。\n\n"
+                "## 隔离级别\n\n"
+                "可串行化是最严格的隔离级别，能够避免幻读等并发异常现象。\n"
+            )
+            segments = call("POST", "/api/notes/segments", {"note": note, "topic": "数据库", "source": "验证笔记"})
+            assert [segment["heading"] for segment in segments["segments"]] == ["事务", "隔离级别"]
+            checks.append("note_segmentation_respects_headings")
+            without_model = call(
+                "POST",
+                "/api/notes/candidates",
+                {"segments": segments["segments"], "topic": "数据库", "source": "验证笔记"},
+                400,
+            )
+            assert "RECALL_LLM" in without_model["detail"]
+            checks.append("candidate_generation_reports_missing_model_config")
+            question = "什么是事务的原子性？"
+            answer = "事务要么全部提交，要么全部回滚。"
+            note_card = {
+                "id": stable_card_id("数据库", question, answer, "验证笔记"),
+                "topic": "数据库",
+                "question": question,
+                "answer": answer,
+                "source": "验证笔记",
+            }
+            assert call("POST", "/api/import", {"cards": [note_card]})["added"] == 1
+            assert call("POST", "/api/import", {"cards": [note_card]})["added"] == 0
+            checks.append("note_card_import_is_idempotent_via_stable_identity")
+            current = call("GET", "/api/workspace")
+            note_record = next(record for record in current["cards"] if record["card"]["id"] == note_card["id"])
+            call(
+                "POST",
+                "/api/review",
+                {
+                    "card_id": note_card["id"],
+                    "rating": "hard",
+                    "entry_version_id": note_record["citation"]["entry_version_id"],
+                },
+            )
+            timeline = call("GET", f"/api/cards/{note_card['id']}/history")["timeline"]
+            assert [item["event"]["kind"] for item in timeline] == ["import", "review"]
+            assert timeline[1]["event"]["rating"] == "hard"
+            assert timeline[0]["entry_version_id"] != timeline[1]["entry_version_id"]
+            checks.append("card_history_reads_exact_versions_not_current_state")
+            weekly = call("GET", "/api/weekly")
+            assert weekly["summary"]["range"]["timezone"] == "UTC"
+            assert weekly["summary"]["totals"]["reviews"] >= 1
+            assert weekly["summary"]["rule"]
+            checks.append("weekly_summary_uses_real_revision_timeline")
+            final = call("GET", "/api/workspace")
             # A separate learner must not inherit this learner's cards.
             with httpx.Client(base_url=services.pc_url, timeout=30, trust_env=False) as pc:
                 other = pc.post(
@@ -169,8 +223,8 @@ def run_verification(directory):
                 "powercontext_version": version("powercontext"),
                 "execution": "real localhost HTTP services, SQLite backend owned by PowerContext; no mocks",
                 "checks": checks,
-                "stats": restored["stats"],
-                "scope_id": restored["scope_id"],
+                "stats": final["stats"],
+                "scope_id": final["scope_id"],
                 "review_citation": citation,
                 "saved_review": json.loads(exact.json()["text"]),
                 "usage_effects": "Synthetic verification only; no real-user efficiency claim.",

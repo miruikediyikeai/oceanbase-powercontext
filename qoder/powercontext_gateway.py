@@ -19,9 +19,9 @@ class PowerContextGateway:
         # One local app owns one learner; serialize read/modify/write operations.
         self.lock = asyncio.Lock()
 
-    async def post(self, path: str, payload: dict) -> dict:
+    async def request(self, method: str, path: str, payload: dict | None = None) -> dict:
         try:
-            response = await self.client.post(path, json=payload)
+            response = await self.client.request(method, path, json=payload)
         except httpx.TransportError as error:
             raise HTTPException(503, "PowerContext 连接失败；写入结果可能未知，请刷新核对后再操作。") from error
         if response.status_code >= 400:
@@ -33,6 +33,12 @@ class PowerContextGateway:
             )
             raise HTTPException(code, message)
         return response.json()
+
+    async def post(self, path: str, payload: dict) -> dict:
+        return await self.request("POST", path, payload)
+
+    async def get(self, path: str) -> dict:
+        return await self.request("GET", path)
 
     async def scope(self) -> str:
         if self.scope_id is None:

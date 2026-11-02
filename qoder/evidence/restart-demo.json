@@ -1,0 +1,27 @@
+{
+  "executed_at": "2026-11-02T11:09:01.456Z",
+  "result": "passed",
+  "steps": [
+    {
+      "name": "reconnected-after-restart",
+      "detail": "PowerContext reachable"
+    },
+    {
+      "name": "state-restored",
+      "detail": "scope=scp_27r0evwjt9eacfrfaaa5rsck0g cards=1 reviews=1 note-card=note-87291ba411ab930f"
+    },
+    {
+      "name": "history-still-readable",
+      "detail": "timeline rows rendered after restart"
+    },
+    {
+      "name": "no-page-errors",
+      "detail": "clean console"
+    }
+  ],
+  "screenshots": [
+    "site/today.png",
+    "site/notes.png",
+    "site/history.png"
+  ]
+}

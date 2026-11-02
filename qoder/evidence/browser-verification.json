@@ -1,27 +1,43 @@
 {
-  "status": "passed",
-  "executed_at": "2026-11-02T07:19:12.263Z",
-  "browser": "Microsoft Edge via Playwright",
-  "checks": [
-    "sample_import_via_ui",
-    "self_rating_saved",
-    "preferences_applied",
-    "page_reload_restores_memory",
-    "memory_export_has_real_citations",
-    "invalid_json_error",
-    "duplicate_import_preserves_progress",
-    "mobile_has_no_horizontal_overflow",
-    "no_javascript_page_errors",
-    "site_preview_image_loaded"
+  "executed_at": "2026-11-02T11:13:56.099Z",
+  "result": "passed",
+  "steps": [
+    {
+      "name": "workspace-connected",
+      "detail": "PowerContext reachable"
+    },
+    {
+      "name": "notes-segmented",
+      "detail": "2 segments"
+    },
+    {
+      "name": "notes-imported",
+      "detail": "1 confirmed card saved, 1 unconfirmed segment ignored"
+    },
+    {
+      "name": "unconfirmed-not-saved",
+      "detail": "only the confirmed card exists in PowerContext"
+    },
+    {
+      "name": "review-saved",
+      "detail": "one review recorded via PowerContext"
+    },
+    {
+      "name": "card-history",
+      "detail": "2 timeline rows with exact citations"
+    },
+    {
+      "name": "weekly-summary",
+      "detail": "reviews=1 range=2026-10-27..2026-11-02 UTC"
+    },
+    {
+      "name": "memory-evidence",
+      "detail": "1 entries: recall_card_v1"
+    },
+    {
+      "name": "no-page-errors",
+      "detail": "clean console"
+    }
   ],
-  "viewports": [
-    [
-      1440,
-      1000
-    ],
-    [
-      390,
-      844
-    ]
-  ]
+  "notes": []
 }

@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from domain import CARD_KIND, MAX_CARDS, PREFERENCES_KIND, Card, CardInput, Preferences, make_plan, review, utc_now
+from history import card_history, weekly_summary
+from notes import CandidateRequest, SegmentInput, generate_candidates, llm_config, split_note
 from powercontext_gateway import PowerContextGateway
 
 ROOT = Path(__file__).resolve().parent
@@ -96,6 +98,7 @@ def create_app(gateway: PowerContextGateway | None = None) -> FastAPI:
                     "reviews": sum(record["card"].repetitions for record in records),
                 },
                 "memory": entries,
+                "llm_configured": llm_config() is not None,
                 "server_time": now,
             }
 
@@ -155,6 +158,42 @@ def create_app(gateway: PowerContextGateway | None = None) -> FastAPI:
             revision = max((entry["citation"]["memory_ref"]["revision"] for entry in entries), default=None)
             result = await pc.save(PREFERENCES_KIND, preferences, previous, "用户设置复习偏好", revision)
             return {"preferences": preferences, "receipt": result}
+
+    @app.post("/api/notes/segments")
+    async def split_notes(body: SegmentInput):
+        return {"segments": [segment.model_dump() for segment in split_note(body.note)]}
+
+    @app.post("/api/notes/candidates")
+    async def note_candidates(body: CandidateRequest):
+        # Candidates are response-only. Nothing is written until the user confirms the import.
+        try:
+            candidates = await generate_candidates(body)
+        except RuntimeError as error:
+            raise HTTPException(400 if llm_config() is None else 502, str(error)) from error
+        return {"candidates": [candidate.model_dump() for candidate in candidates]}
+
+    @app.get("/api/cards/{card_id}/history")
+    async def get_card_history(card_id: str):
+        async with pc.lock:
+            entries = await pc.entries()
+            records, _, _ = decode(entries)
+            record = next((record for record in records if record["card"].id == card_id), None)
+            if record is None:
+                raise HTTPException(404, "知识卡片不存在。")
+            head = record["citation"]["memory_ref"]["revision"]
+            timeline = await card_history(pc, await pc.scope(), record["citation"]["entry_id"], head)
+            return {"card_id": card_id, "timeline": timeline, "head_revision": head}
+
+    @app.get("/api/weekly")
+    async def get_weekly():
+        async with pc.lock:
+            entries = await pc.entries()
+            revision = max((entry["citation"]["memory_ref"]["revision"] for entry in entries), default=None)
+            if revision is None:
+                return {"summary": None, "empty": True}
+            summary = await weekly_summary(pc, await pc.scope(), revision)
+            empty = summary["totals"]["reviews"] == 0 and summary["totals"]["new_cards"] == 0
+            return {"summary": summary, "empty": empty}
 
     return app
 

@@ -14,6 +14,8 @@
     <nav aria-label="主导航">
       <button class="nav active" data-view="today"><span>◉</span> 今日复习 <span class="nav-count" id="nav-due">0</span></button>
       <button class="nav" data-view="library"><span>▤</span> 知识卡片</button>
+      <button class="nav" data-view="notes"><span>✎</span> 笔记转卡片</button>
+      <button class="nav" data-view="history"><span>◔</span> 复习回顾</button>
       <button class="nav" data-view="memory"><span>◇</span> 学习记忆</button>
       <button class="nav" data-view="settings"><span>⚙</span> 复习偏好</button>
     </nav>
@@ -39,6 +41,38 @@
     <section class="view" id="view-library" hidden>
       <div class="page-heading"><div><p class="eyebrow">YOUR KNOWLEDGE, CONNECTED</p><h1>把知识，<em>收进卡片。</em></h1><p class="subtitle">问题、答案与出处，一起保存。支持导入 JSON，最多 100 张。</p></div><div class="actions"><button class="button secondary" id="load-sample">导入示例卡片</button><label class="button primary" for="file-import">＋ 导入 JSON</label><input type="file" id="file-import" accept=".json,application/json" hidden></div></div>
       <label class="search-box"><span>⌕</span><input type="search" id="search" placeholder="筛选问题、主题或来源" aria-label="筛选知识卡片"></label><div id="library-list" class="library-grid"></div>
+    </section>
+    <section class="view" id="view-notes" hidden>
+      <div class="page-heading"><div><p class="eyebrow">FROM NOTES TO CARDS</p><h1>把笔记，<em>变成会提问的卡片。</em></h1><p class="subtitle">粘贴 Markdown 笔记，按段落整理成候选卡片。逐条核对、编辑，确认后才会进入学习记忆。</p></div></div>
+      <div class="notes-grid">
+        <form class="notes-form" id="notes-form">
+          <label for="notes-topic">主题<input id="notes-topic" maxlength="80" placeholder="例如：数据库原理" required></label>
+          <label for="notes-source">来源<input id="notes-source" maxlength="200" placeholder="例如：课程笔记第 5 讲" required></label>
+          <label for="notes-text">Markdown 笔记<textarea id="notes-text" rows="14" placeholder="粘贴你的笔记……支持标题与段落，系统会按标题和空行分段。" required></textarea></label>
+          <button class="button primary" type="submit">分段预览 →</button>
+        </form>
+        <aside class="notes-guide">
+          <span class="mini-label">HOW IT WORKS</span>
+          <h2>确认之前，<em>什么都不保存。</em></h2>
+          <p>笔记内容只在浏览器和请求中处理。候选卡片按内容生成稳定 ID，相同笔记重复整理不会产生重复卡片。</p>
+          <div class="steps"><div><b>01</b><span>粘贴笔记，按段落拆分</span></div><div><b>02</b><span>逐条核对问题与答案</span></div><div><b>03</b><span>确认导入，写入学习记忆</span></div></div>
+          <div class="context-foot"><span class="status-dot" id="llm-dot"></span> <span id="llm-status">正在检查模型配置</span></div>
+        </aside>
+      </div>
+      <div id="segments-area"></div>
+    </section>
+    <section class="view" id="view-history" hidden>
+      <div class="page-heading"><div><p class="eyebrow">EVERY REVIEW, REMEMBERED</p><h1>回头看看，<em>走过的路。</em></h1><p class="subtitle">复习历史来自 PowerContext 的不可变版本记录，不是对当前状态的推测。</p></div></div>
+      <div class="metrics" id="weekly-metrics" hidden>
+        <article><span>本周复习</span><strong id="weekly-reviews">—</strong><small>最近 7 天 · UTC</small></article>
+        <article><span>本周新增卡片</span><strong id="weekly-new">—</strong><small>经确认导入</small></article>
+        <article><span>本周遗忘次数</span><strong id="weekly-lapses">—</strong><small>自评“还没记住”</small></article>
+      </div>
+      <div class="section-heading lower"><h2>每周回顾</h2><span id="weekly-range">正在读取 PowerContext 历史版本</span></div>
+      <div id="weekly-area" class="card-list"></div>
+      <div class="section-heading lower"><h2>单卡历史</h2><span>选择一张卡片查看每次复习</span></div>
+      <div id="history-card-picker" class="library-grid"></div>
+      <div id="history-timeline" class="card-list"></div>
     </section>
     <section class="view" id="view-memory" hidden>
       <div class="page-heading"><div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h1>学过的，<em>有迹可循。</em></h1><p class="subtitle">这里展示实际读取的 PowerContext 记忆，包括版本与引用。</p></div><button class="button secondary" id="export-memory">↓ 导出记忆证据</button></div>
