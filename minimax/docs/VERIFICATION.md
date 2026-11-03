@@ -133,8 +133,14 @@ git checkout -- minimax/sample_project/src/orderkit/repository.py
 | 端到端验证逐步日志 | `evidence/verification/<时间戳>/` |
 | 数据库查询记录 | `evidence/database/<时间戳>/database-usage.json` |
 | 规格变更前后对比 | `evidence/spec-update/<时间戳>/comparison.json` |
+| PowerContext 服务重启后读回状态 | `evidence/powercontext/<时间戳>/restart-demo.json` |
 | MiniMax 请求、响应与代码差异 | `evidence/verification/<时间戳>/minimax/` |
 
 其中修改前的目标测试结果为 5 失败 1 通过（失败原因均为 `TypeError: ... unexpected
 keyword argument 'status'`），回归测试 7 条全部通过——证明失败来自目标功能尚未
 实现，而不是环境或依赖问题。
+
+服务重启演示（`scripts/powercontext_restart_demo.py`）会读取任务状态、停止本地
+PowerContext 服务、用同一数据目录重新启动，再次读取状态，结果记录在
+`restart-demo.json`：`state_found_after_restart` 为 `true`，`specs_preserved`、
+`code_preserved`、`target_tests_preserved` 均为 `true`。

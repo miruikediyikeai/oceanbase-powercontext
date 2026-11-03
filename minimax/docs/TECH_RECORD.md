@@ -13,7 +13,7 @@
 | 运行目录 | `/home/bit/seekdb-run/seekdb1` |
 | SQL 端口 | `10000`（MySQL 协议） |
 | 遥测 ID | `fb0a292a-08d2-8497-b153-c291b31f1e55`（取自 `run/telemetry.json` 的 `content.id`） |
-| 资料库 | `sdd_context` |
+| 资料库 | `sdd_context`（规格变更演示使用独立库 `sdd_context_spec_demo`） |
 
 ### 1.2 连接验证
 
@@ -34,10 +34,11 @@ version	sql_check	db	server_time
 | `spec_rule` | 9 | 3 份规格共 9 条规则的正文、来源文件与内容指纹 |
 | `code_symbol` | 9 | 3 个源文件中的类、方法、函数签名与源码片段 |
 | `test_case` | 13 | 13 条测试用例及其直接覆盖的符号 `targets` |
-| `import_batch` | 3 | 三次导入的批次、来源目录与资料数量 |
-| `import_record` | 逐条 | 每条资料在每个批次中的 inserted / updated / unchanged |
+| `import_batch` | 每次导入一条 | 导入批次、来源目录与资料数量 |
+| `import_record` | 逐条 | 每条资料在每个批次中的 inserted / updated / unchanged / removed |
 
-完整记录见 `evidence/database/<时间戳>/database-usage.json`。
+重新导入时，模块会删除工程里已经不存在的资料（`removed`），因此库内内容始终等于
+当前工程的内容。完整记录见 `evidence/database/<时间戳>/database-usage.json`。
 
 ### 1.4 查询如何进入上下文
 
@@ -157,6 +158,21 @@ python scripts/start_powercontext.py --port 8811 --data .data/powercontext
 状态里的 `specs`、`code`、`target_tests`、`regression_tests` 直接来自当次检索，
 `done` / `todo` 记录已完成与待办事项，`verification` 记录测试命令与退出码，
 因此重启后的进程可以直接继续该任务，而不必重新检索。
+
+### 2.4 服务重启后仍然可读
+
+`python scripts/powercontext_restart_demo.py` 会读取任务状态、停止本地
+PowerContext 服务、用同一数据目录重新启动服务，再读取一次状态，结果写入
+`evidence/powercontext/<时间戳>/restart-demo.json`：
+
+| 项 | 实测值 |
+| --- | --- |
+| `stopped_ok` | `true` |
+| `restarted_ok` | `true` |
+| `state_found_after_restart` | `true` |
+| `same_task` / `specs_preserved` / `code_preserved` / `target_tests_preserved` | `true` |
+
+即任务状态落在服务之外的持久化存储（SQLite 文件）中，服务重启后依旧可用。
 
 ## 3. MiniMax
 

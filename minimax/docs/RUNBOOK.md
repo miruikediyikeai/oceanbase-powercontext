@@ -144,6 +144,7 @@ cd minimax
 .venv/Scripts/python.exe scripts/run_verification.py          # 完整闭环（含 MiniMax 改动）
 .venv/Scripts/python.exe scripts/run_verification.py --skip-agent  # 跳过模型改动步骤
 .venv/Scripts/python.exe scripts/spec_update_demo.py          # 规格变更后上下文随之更新
+.venv/Scripts/python.exe scripts/powercontext_restart_demo.py  # 服务重启后读回任务状态
 .venv/Scripts/python.exe scripts/capture_db_evidence.py       # 采集数据库使用记录
 ```
 

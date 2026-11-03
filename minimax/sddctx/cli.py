@@ -55,6 +55,48 @@ def _context_path(settings: Settings, task_id: str) -> Path:
 # -- import -----------------------------------------------------------------
 
 
+def _collect_materials(project_dir: Path) -> tuple[list[Any], list[Any], list[Any]]:
+    """解析工程目录下的规格规则、代码符号与测试用例。"""
+    spec_rules: list[Any] = []
+    for document in load_specs(project_dir / "specs", project_dir):
+        spec_rules.extend(document.to_rules())
+
+    symbols: list[Any] = []
+    for path in collect_source_files(project_dir):
+        symbols.extend(extract_symbols(path, project_dir))
+    known = {symbol.symbol for symbol in symbols} | {
+        symbol.symbol.split(".", 1)[-1] for symbol in symbols
+    }
+
+    tests: list[Any] = []
+    for path in collect_test_files(project_dir):
+        tests.extend(extract_tests(path, project_dir, known))
+    return spec_rules, symbols, tests
+
+
+def _import_records(
+    spec_changes: list[tuple[str, str]],
+    spec_rules: list[Any],
+    code_changes: list[tuple[str, str]],
+    symbols: list[Any],
+    test_changes: list[tuple[str, str]],
+    tests: list[Any],
+    removed: dict[str, list[str]],
+) -> list[tuple[str, str, str, str]]:
+    """把本次导入的逐条变更整理成批次记录。"""
+    records: list[tuple[str, str, str, str]] = []
+    for (key, change), rule in zip(spec_changes, spec_rules, strict=True):
+        records.append(("spec_rule", key, rule.content_hash, change))
+    for (key, change), symbol in zip(code_changes, symbols, strict=True):
+        records.append(("code_symbol", key, symbol_fingerprint(symbol), change))
+    for (key, change), test in zip(test_changes, tests, strict=True):
+        records.append(("test_case", key, _test_hash(test), change))
+    for kind, keys in removed.items():
+        for key in keys:
+            records.append((kind, key, "", "removed"))
+    return records
+
+
 def command_import(args: argparse.Namespace) -> int:
     settings = _settings(args)
     project_dir = settings.project_dir
@@ -63,45 +105,21 @@ def command_import(args: argparse.Namespace) -> int:
         return 2
 
     batch_id = args.batch_id or f"batch-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
-
-    spec_documents = load_specs(project_dir / "specs", project_dir)
-    spec_rules = []
-    for document in spec_documents:
-        spec_rules.extend(document.to_rules())
-
-    symbols = []
-    for path in collect_source_files(project_dir):
-        symbols.extend(extract_symbols(path, project_dir))
-    known = {symbol.symbol for symbol in symbols} | {
-        symbol.symbol.split(".", 1)[-1] for symbol in symbols
-    }
-
-    tests = []
-    for path in collect_test_files(project_dir):
-        tests.extend(extract_tests(path, project_dir, known))
+    spec_rules, symbols, tests = _collect_materials(project_dir)
 
     with SeekDBStore(settings.database) as store:
         store.ensure_schema()
         spec_changes = store.upsert_spec_rules(spec_rules)
         code_changes = store.upsert_code_symbols(symbols)
         test_changes = store.upsert_test_cases(tests)
-        removed_specs = store.purge_stale_spec_rules(spec_rules)
-        removed_code = store.purge_stale_code_symbols(symbols)
-        removed_tests = store.purge_stale_test_cases(tests)
-
-        records: list[tuple[str, str, str, str]] = []
-        for (key, change), rule in zip(spec_changes, spec_rules, strict=True):
-            records.append(("spec_rule", key, rule.content_hash, change))
-        for (key, change), symbol in zip(code_changes, symbols, strict=True):
-            records.append(("code_symbol", key, symbol_fingerprint(symbol), change))
-        for (key, change), test in zip(test_changes, tests, strict=True):
-            records.append(("test_case", key, _test_hash(test), change))
-        for key in removed_specs:
-            records.append(("spec_rule", key, "", "removed"))
-        for key in removed_code:
-            records.append(("code_symbol", key, "", "removed"))
-        for key in removed_tests:
-            records.append(("test_case", key, "", "removed"))
+        removed = {
+            "spec_rule": store.purge_stale_spec_rules(spec_rules),
+            "code_symbol": store.purge_stale_code_symbols(symbols),
+            "test_case": store.purge_stale_test_cases(tests),
+        }
+        records = _import_records(
+            spec_changes, spec_rules, code_changes, symbols, test_changes, tests, removed
+        )
 
         store.record_batch(
             batch_id,
@@ -119,14 +137,10 @@ def command_import(args: argparse.Namespace) -> int:
         "specs": len(spec_rules),
         "code_symbols": len(symbols),
         "test_cases": len(tests),
-        "removed": {
-            "spec_rule": removed_specs,
-            "code_symbol": removed_code,
-            "test_case": removed_tests,
-        },
+        "removed": removed,
         "changed": sorted(
             {change for _key, change in spec_changes + code_changes + test_changes if change != "unchanged"}
-            | ({"removed"} if removed_specs or removed_code or removed_tests else set())
+            | ({"removed"} if any(removed.values()) else set())
         ),
         "counts": counts,
         "at": _now(),

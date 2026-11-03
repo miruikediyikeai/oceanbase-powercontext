@@ -43,10 +43,11 @@ sample_project/ ──specs.py / code.py──▶ 规范化的规则、符号、
 | `code_symbol` | 类、函数、方法的签名与源码片段 | `(symbol, file)` |
 | `test_case` | 测试用例及其直接覆盖的符号 `targets` | `(name, file)` |
 | `import_batch` | 每次导入的批次、来源目录与资料数量 | `batch_id` |
-| `import_record` | 每条资料在某个批次中的变更类型（inserted/updated/unchanged） | `(batch_id, material_kind, material_key)` |
+| `import_record` | 每条资料在某个批次中的变更类型（inserted/updated/unchanged/removed） | `(batch_id, material_kind, material_key)` |
 
 `content_hash` 记录资料内容指纹：导入时与库内指纹比较，得到 inserted / updated /
-unchanged，规格更新后重新导入即为 updated，检索结果随之改变。
+unchanged，规格更新后重新导入即为 updated，检索结果随之改变。工程里已经删除的
+资料在重新导入时会被清除（removed），库内内容始终等于当前工程的内容。
 
 ## 三、上下文组装算法
 
