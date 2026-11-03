@@ -29,7 +29,7 @@
 | 模型接入 | `sddctx/agent.py` | 调用 MiniMax 开放接口，把上下文交给模型，产出并应用 unified diff |
 | 命令行 | `sddctx/cli.py` | `import` / `context` / `state` / `agent` / `verify` / `doctor` / `stats` |
 | 示例业务工程 | `sample_project/` | 可运行、带测试的订单结算工程 `orderkit`，含 3 份规格与 13 条测试 |
-| 验证脚本 | `scripts/` | 端到端验证、规格变更演示、数据库使用记录采集 |
+| 验证脚本 | `scripts/` | 端到端验证、规格变更演示、服务重启后状态复用演示、数据库使用记录采集 |
 
 ## 二、上下文是怎么选出来的
 
