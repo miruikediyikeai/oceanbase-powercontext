@@ -1,0 +1,22 @@
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "C90", "DTZ", "TRY", "S", "RUF"]
+
+ignore = [
+    # 中文文档与提示词使用全角标点，属预期写法
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # SQL 全部使用参数占位符，表名与列名来自代码内固定清单
+    "S608",
+    # 子进程只以 sys.executable 启动固定模块，参数在代码内构造，不接受外部拼接
+    "S603",
+    # 面向使用者的中文提示直接写在抛出点，便于 CLI 直接展示
+    "TRY003",
+]
+
+[lint.per-file-ignores]
+"sample_project/tests/*" = ["S101"]
+"tests/*" = ["S101"]

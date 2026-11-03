@@ -1,0 +1,23 @@
+{
+  "before_rule_ids": [
+    "SPEC-ORD-001-R1",
+    "SPEC-ORD-001-R2",
+    "SPEC-ORD-003-R1",
+    "SPEC-ORD-003-R2",
+    "SPEC-ORD-003-R3",
+    "SPEC-ORD-003-R4"
+  ],
+  "after_rule_ids": [
+    "SPEC-ORD-001-R1",
+    "SPEC-ORD-001-R2",
+    "SPEC-ORD-003-R1",
+    "SPEC-ORD-003-R2",
+    "SPEC-ORD-003-R3",
+    "SPEC-ORD-003-R4",
+    "SPEC-ORD-003-R5"
+  ],
+  "added_rule_ids": [
+    "SPEC-ORD-003-R5"
+  ],
+  "updated": true
+}

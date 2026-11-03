@@ -1,0 +1,458 @@
+{
+  "captured_at": "2026-11-03T18:38:39+08:00",
+  "target": {
+    "host": "172.29.132.88",
+    "port": 10000,
+    "database": "sdd_context"
+  },
+  "task": "为 OrderRepository.list_orders 增加按订单状态筛选的能力，支持状态枚举与状态字符串（忽略大小写），非法状态抛出 ValueError，无匹配时返回空列表。规格见 SPEC-ORD-003。",
+  "tokens": [
+    "list_orders",
+    "ord",
+    "orderrepository",
+    "spec",
+    "valueerror",
+    "与状",
+    "举与",
+    "列表",
+    "加按",
+    "匹配",
+    "单状",
+    "回空",
+    "增加",
+    "大小",
+    "字符",
+    "小写",
+    "忽略",
+    "忽略大小写",
+    "态字",
+    "态抛",
+    "态枚",
+    "态筛",
+    "抛出",
+    "持状",
+    "按订",
+    "支持",
+    "无匹",
+    "时返"
+  ],
+  "version": [
+    {
+      "version": "5.7.25-OceanBase seekdb-v1.4.0.0",
+      "db": "sdd_context"
+    }
+  ],
+  "counts": {
+    "spec_rule": 9,
+    "code_symbol": 9,
+    "test_case": 13,
+    "import_batch": 10
+  },
+  "tables": [
+    {
+      "Tables_in_sdd_context": "code_symbol"
+    },
+    {
+      "Tables_in_sdd_context": "import_batch"
+    },
+    {
+      "Tables_in_sdd_context": "import_record"
+    },
+    {
+      "Tables_in_sdd_context": "spec_rule"
+    },
+    {
+      "Tables_in_sdd_context": "test_case"
+    }
+  ],
+  "import_batches": [
+    {
+      "batch_id": "batch-20261103103710",
+      "imported_at": "2026-11-03 18:37:11",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103103541",
+      "imported_at": "2026-11-03 18:35:42",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103102948",
+      "imported_at": "2026-11-03 18:29:49",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103102944",
+      "imported_at": "2026-11-03 18:29:45",
+      "source_dir": "D:/oceanbase-powercontext/minimax/.data/spec-update-demo/project",
+      "spec_count": 10,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103102939",
+      "imported_at": "2026-11-03 18:29:40",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103102924",
+      "imported_at": "2026-11-03 18:29:25",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103102916",
+      "imported_at": "2026-11-03 18:29:17",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103102834",
+      "imported_at": "2026-11-03 18:28:35",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103094931",
+      "imported_at": "2026-11-03 17:49:32",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103094407",
+      "imported_at": "2026-11-03 17:44:08",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    }
+  ],
+  "spec_rules": [
+    {
+      "spec_id": "SPEC-ORD-001",
+      "rule_id": "SPEC-ORD-001-R1",
+      "title": "金额定义",
+      "source_file": "specs/SPEC-ORD-001-order-amount.md",
+      "content_hash": "daa9a8c734f8a334c551f8a4c4a10c70959e548831d76968406da0749e01f3ca"
+    },
+    {
+      "spec_id": "SPEC-ORD-001",
+      "rule_id": "SPEC-ORD-001-R2",
+      "title": "非法数量",
+      "source_file": "specs/SPEC-ORD-001-order-amount.md",
+      "content_hash": "a819e612368399dc8028765d77c527e5ec8bbea816ed2f17fc1e91876d3cf038"
+    },
+    {
+      "spec_id": "SPEC-ORD-002",
+      "rule_id": "SPEC-ORD-002-R1",
+      "title": "满减券",
+      "source_file": "specs/SPEC-ORD-002-coupon.md",
+      "content_hash": "0c305234a0d7767903afac4df63d59d290cebdda413493d5aac6f6c8694142fb"
+    },
+    {
+      "spec_id": "SPEC-ORD-002",
+      "rule_id": "SPEC-ORD-002-R2",
+      "title": "未达门槛",
+      "source_file": "specs/SPEC-ORD-002-coupon.md",
+      "content_hash": "58c606d46c51dc303e95444b036a6f27249640cf9039afcae96f0107b7078113"
+    },
+    {
+      "spec_id": "SPEC-ORD-002",
+      "rule_id": "SPEC-ORD-002-R3",
+      "title": "空优惠券",
+      "source_file": "specs/SPEC-ORD-002-coupon.md",
+      "content_hash": "269c8ee1463cc434674fba61a89c9c5c86d7c7b28033715641336d8a86a18372"
+    },
+    {
+      "spec_id": "SPEC-ORD-003",
+      "rule_id": "SPEC-ORD-003-R1",
+      "title": "筛选语义",
+      "source_file": "specs/SPEC-ORD-003-order-status-filter.md",
+      "content_hash": "1921a3ad6f3cd2f2226927696ffb5e2bbf7ee934fad53d319fa3b97a660d115d"
+    },
+    {
+      "spec_id": "SPEC-ORD-003",
+      "rule_id": "SPEC-ORD-003-R2",
+      "title": "状态取值",
+      "source_file": "specs/SPEC-ORD-003-order-status-filter.md",
+      "content_hash": "096fef255ef736ac701e764c2b2cdf24b1c3419987912a5be910f56590a62ca2"
+    },
+    {
+      "spec_id": "SPEC-ORD-003",
+      "rule_id": "SPEC-ORD-003-R3",
+      "title": "非法状态",
+      "source_file": "specs/SPEC-ORD-003-order-status-filter.md",
+      "content_hash": "be46e20fd45ef7e35c0797ad7a8e9d3cbd002194e01a948e0f2f2cbbca44a193"
+    },
+    {
+      "spec_id": "SPEC-ORD-003",
+      "rule_id": "SPEC-ORD-003-R4",
+      "title": "空结果",
+      "source_file": "specs/SPEC-ORD-003-order-status-filter.md",
+      "content_hash": "a556611d89176855058bd22c99602758100a679c8678e9c0fa4a04fbec3b2aff"
+    }
+  ],
+  "code_symbols": [
+    {
+      "symbol": "OrderStatus",
+      "kind": "class",
+      "file": "src/orderkit/models.py",
+      "line": 9
+    },
+    {
+      "symbol": "Order",
+      "kind": "class",
+      "file": "src/orderkit/models.py",
+      "line": 19
+    },
+    {
+      "symbol": "Order.amount",
+      "kind": "method",
+      "file": "src/orderkit/models.py",
+      "line": 29
+    },
+    {
+      "symbol": "Coupon",
+      "kind": "class",
+      "file": "src/orderkit/pricing.py",
+      "line": 9
+    },
+    {
+      "symbol": "apply_coupon",
+      "kind": "function",
+      "file": "src/orderkit/pricing.py",
+      "line": 17
+    },
+    {
+      "symbol": "OrderRepository",
+      "kind": "class",
+      "file": "src/orderkit/repository.py",
+      "line": 10
+    },
+    {
+      "symbol": "OrderRepository.__init__",
+      "kind": "method",
+      "file": "src/orderkit/repository.py",
+      "line": 13
+    },
+    {
+      "symbol": "OrderRepository.list_orders",
+      "kind": "method",
+      "file": "src/orderkit/repository.py",
+      "line": 16
+    },
+    {
+      "symbol": "OrderRepository.find_by_id",
+      "kind": "method",
+      "file": "src/orderkit/repository.py",
+      "line": 20
+    }
+  ],
+  "test_cases": [
+    {
+      "name": "test_amount_is_unit_price_times_quantity",
+      "file": "tests/test_models.py",
+      "targets": [
+        "Order",
+        "OrderStatus",
+        "amount"
+      ]
+    },
+    {
+      "name": "test_non_positive_quantity_is_rejected",
+      "file": "tests/test_models.py",
+      "targets": [
+        "Order",
+        "OrderStatus",
+        "amount"
+      ]
+    },
+    {
+      "name": "test_status_values_are_stable",
+      "file": "tests/test_models.py",
+      "targets": [
+        "OrderStatus"
+      ]
+    },
+    {
+      "name": "test_coupon_is_applied_when_threshold_is_met",
+      "file": "tests/test_pricing.py",
+      "targets": [
+        "Coupon",
+        "apply_coupon"
+      ]
+    },
+    {
+      "name": "test_coupon_is_ignored_below_threshold",
+      "file": "tests/test_pricing.py",
+      "targets": [
+        "Coupon",
+        "apply_coupon"
+      ]
+    },
+    {
+      "name": "test_discount_never_goes_below_zero",
+      "file": "tests/test_pricing.py",
+      "targets": [
+        "Coupon",
+        "apply_coupon"
+      ]
+    },
+    {
+      "name": "test_no_coupon_keeps_amount",
+      "file": "tests/test_pricing.py",
+      "targets": [
+        "apply_coupon"
+      ]
+    },
+    {
+      "name": "test_list_orders_without_filter_returns_all",
+      "file": "tests/test_repository_filter.py",
+      "targets": [
+        "OrderRepository",
+        "list_orders"
+      ]
+    },
+    {
+      "name": "test_list_orders_filters_by_status",
+      "file": "tests/test_repository_filter.py",
+      "targets": [
+        "OrderRepository",
+        "list_orders"
+      ]
+    },
+    {
+      "name": "test_list_orders_accepts_status_enum",
+      "file": "tests/test_repository_filter.py",
+      "targets": [
+        "OrderRepository",
+        "OrderStatus",
+        "list_orders"
+      ]
+    },
+    {
+      "name": "test_status_filter_is_case_insensitive",
+      "file": "tests/test_repository_filter.py",
+      "targets": [
+        "OrderRepository",
+        "list_orders"
+      ]
+    },
+    {
+      "name": "test_unknown_status_raises_value_error",
+      "file": "tests/test_repository_filter.py",
+      "targets": [
+        "OrderRepository",
+        "OrderStatus",
+        "list_orders"
+      ]
+    },
+    {
+      "name": "test_filter_without_match_returns_empty_list",
+      "file": "tests/test_repository_filter.py",
+      "targets": [
+        "Order",
+        "OrderRepository",
+        "OrderStatus",
+        "list_orders"
+      ]
+    }
+  ],
+  "retrieval": {
+    "spec_rules": [
+      {
+        "rule_id": "SPEC-ORD-003-R1",
+        "score": 10,
+        "source_file": "specs/SPEC-ORD-003-order-status-filter.md"
+      },
+      {
+        "rule_id": "SPEC-ORD-003-R2",
+        "score": 8,
+        "source_file": "specs/SPEC-ORD-003-order-status-filter.md"
+      },
+      {
+        "rule_id": "SPEC-ORD-003-R4",
+        "score": 7,
+        "source_file": "specs/SPEC-ORD-003-order-status-filter.md"
+      },
+      {
+        "rule_id": "SPEC-ORD-003-R3",
+        "score": 4,
+        "source_file": "specs/SPEC-ORD-003-order-status-filter.md"
+      },
+      {
+        "rule_id": "SPEC-ORD-001-R2",
+        "score": 2,
+        "source_file": "specs/SPEC-ORD-001-order-amount.md"
+      },
+      {
+        "rule_id": "SPEC-ORD-002-R3",
+        "score": 1,
+        "source_file": "specs/SPEC-ORD-002-coupon.md"
+      }
+    ],
+    "code_symbols": [
+      {
+        "symbol": "OrderRepository",
+        "file": "src/orderkit/repository.py",
+        "score": 9
+      },
+      {
+        "symbol": "OrderRepository.list_orders",
+        "file": "src/orderkit/repository.py",
+        "score": 5
+      }
+    ]
+  },
+  "context_sources": {
+    "specs": [
+      "SPEC-ORD-001::SPEC-ORD-001-R2",
+      "SPEC-ORD-003::SPEC-ORD-003-R1",
+      "SPEC-ORD-003::SPEC-ORD-003-R2",
+      "SPEC-ORD-003::SPEC-ORD-003-R3",
+      "SPEC-ORD-003::SPEC-ORD-003-R4"
+    ],
+    "code": [
+      "src/orderkit/models.py::OrderStatus",
+      "src/orderkit/repository.py::OrderRepository",
+      "src/orderkit/repository.py::OrderRepository.list_orders"
+    ],
+    "target_tests": [
+      "tests/test_repository_filter.py::test_list_orders_without_filter_returns_all",
+      "tests/test_repository_filter.py::test_list_orders_filters_by_status",
+      "tests/test_repository_filter.py::test_list_orders_accepts_status_enum",
+      "tests/test_repository_filter.py::test_status_filter_is_case_insensitive",
+      "tests/test_repository_filter.py::test_unknown_status_raises_value_error",
+      "tests/test_repository_filter.py::test_filter_without_match_returns_empty_list"
+    ],
+    "regression_tests": [
+      "tests/test_models.py::test_amount_is_unit_price_times_quantity",
+      "tests/test_models.py::test_non_positive_quantity_is_rejected",
+      "tests/test_models.py::test_status_values_are_stable",
+      "tests/test_pricing.py::test_coupon_is_applied_when_threshold_is_met",
+      "tests/test_pricing.py::test_coupon_is_ignored_below_threshold",
+      "tests/test_pricing.py::test_discount_never_goes_below_zero",
+      "tests/test_pricing.py::test_no_coupon_keeps_amount"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx import
+
+{
+  "batch_id": "batch-20261103103717",
+  "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+  "specs": 9,
+  "code_symbols": 9,
+  "test_cases": 13,
+  "removed": {
+    "spec_rule": [],
+    "code_symbol": [],
+    "test_case": []
+  },
+  "changed": [
+    "inserted"
+  ],
+  "counts": {
+    "spec_rule": 9,
+    "code_symbol": 9,
+    "test_case": 13,
+    "import_batch": 1
+  },
+  "at": "2026-11-03T18:37:18+08:00"
+}
+
