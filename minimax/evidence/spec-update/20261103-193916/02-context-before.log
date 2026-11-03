@@ -1,15 +1,14 @@
-$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx context --task-id T-SPEC-UPDATE --task 为 OrderRepository.list_orders 增加按订单状态筛选的能力，规格见 SPEC-ORD-003。
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx context --task-id T-SPEC-BASE --task 为 OrderRepository.list_orders 增加按订单状态筛选的能力，规格见 SPEC-ORD-003。
 
 {
-  "task_id": "T-SPEC-UPDATE",
+  "task_id": "T-SPEC-BASE",
   "specs": [
     "SPEC-ORD-001::SPEC-ORD-001-R1",
     "SPEC-ORD-001::SPEC-ORD-001-R2",
     "SPEC-ORD-003::SPEC-ORD-003-R1",
     "SPEC-ORD-003::SPEC-ORD-003-R2",
     "SPEC-ORD-003::SPEC-ORD-003-R3",
-    "SPEC-ORD-003::SPEC-ORD-003-R4",
-    "SPEC-ORD-003::SPEC-ORD-003-R5"
+    "SPEC-ORD-003::SPEC-ORD-003-R4"
   ],
   "code": [
     "src/orderkit/models.py::OrderStatus",
@@ -33,23 +32,23 @@ $ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx context -
     "tests/test_pricing.py::test_discount_never_goes_below_zero",
     "tests/test_pricing.py::test_no_coupon_keeps_amount"
   ],
-  "context": "D:/oceanbase-powercontext/minimax/.data/context/T-SPEC-UPDATE.json",
-  "context_markdown": "D:/oceanbase-powercontext/minimax/.data/context/T-SPEC-UPDATE.md",
+  "context": "D:/oceanbase-powercontext/minimax/.data/context/T-SPEC-BASE.json",
+  "context_markdown": "D:/oceanbase-powercontext/minimax/.data/context/T-SPEC-BASE.md",
   "powercontext": {
     "scope_id": "scp_28jde4jvfbd50v0jqxbc8d96g5",
     "memory": {
       "family": "memory",
       "artifact_id": "memory",
-      "revision": 14
+      "revision": 26
     },
     "citation": {
       "memory_ref": {
         "family": "memory",
         "artifact_id": "memory",
-        "revision": 14
+        "revision": 26
       },
-      "entry_id": "mem_ent_5b712b7a21e14719842233e9ff07f865",
-      "entry_version_id": "mem_ver_576b1f5eeac94cdbbdb21fabaa4df97b"
+      "entry_id": "mem_ent_5efe7dc8388048c997b13d8c159ca033",
+      "entry_version_id": "mem_ver_e4c0c80495684a879fce79188620b72f"
     }
   }
 }

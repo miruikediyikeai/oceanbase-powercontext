@@ -1,0 +1,4 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m pytest tests/test_repository_filter.py::test_list_orders_without_filter_returns_all tests/test_repository_filter.py::test_list_orders_filters_by_status tests/test_repository_filter.py::test_list_orders_accepts_status_enum tests/test_repository_filter.py::test_status_filter_is_case_insensitive tests/test_repository_filter.py::test_unknown_status_raises_value_error tests/test_repository_filter.py::test_filter_without_match_returns_empty_list -q
+
+......                                                                   [100%]
+

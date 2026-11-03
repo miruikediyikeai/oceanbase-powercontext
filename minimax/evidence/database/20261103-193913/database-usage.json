@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-11-03T18:38:39+08:00",
+  "captured_at": "2026-11-03T19:39:13+08:00",
   "target": {
     "host": "172.29.132.88",
     "port": 10000,
@@ -44,9 +44,9 @@
   ],
   "counts": {
     "spec_rule": 9,
-    "code_symbol": 9,
+    "code_symbol": 10,
     "test_case": 13,
-    "import_batch": 10
+    "import_batch": 14
   },
   "tables": [
     {
@@ -66,6 +66,38 @@
     }
   ],
   "import_batches": [
+    {
+      "batch_id": "batch-20261103113912",
+      "imported_at": "2026-11-03 19:39:13",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 10,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103113840",
+      "imported_at": "2026-11-03 19:38:41",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103113738",
+      "imported_at": "2026-11-03 19:37:39",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
+    {
+      "batch_id": "batch-20261103104042",
+      "imported_at": "2026-11-03 18:40:43",
+      "source_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+      "spec_count": 9,
+      "code_count": 9,
+      "test_count": 13
+    },
     {
       "batch_id": "batch-20261103103710",
       "imported_at": "2026-11-03 18:37:11",
@@ -262,10 +294,16 @@
       "line": 16
     },
     {
+      "symbol": "OrderRepository._parse_status",
+      "kind": "method",
+      "file": "src/orderkit/repository.py",
+      "line": 24
+    },
+    {
       "symbol": "OrderRepository.find_by_id",
       "kind": "method",
       "file": "src/orderkit/repository.py",
-      "line": 20
+      "line": 35
     }
   ],
   "test_cases": [
@@ -420,7 +458,7 @@
       {
         "symbol": "OrderRepository.list_orders",
         "file": "src/orderkit/repository.py",
-        "score": 5
+        "score": 6
       }
     ]
   },

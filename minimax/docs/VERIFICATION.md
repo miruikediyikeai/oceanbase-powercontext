@@ -37,7 +37,8 @@
 ## 4. 初始数据
 
 - **数据库**：空库 `sdd_context`（模块自动建库建表）。执行 `import` 后应包含
-  9 条规格规则、9 个代码符号、13 条测试用例。
+  9 条规格规则、9 个代码符号、13 条测试用例；应用代码改动后重新导入为 10 个代码符号
+  （新增 `OrderRepository._parse_status`）。
 - **PowerContext**：空 scope。执行 `context` 后应出现一条 `kind=working_note` 的
   任务状态记录。
 - **示例工程**：`sample_project/` 中 `OrderRepository.list_orders` 尚不支持 `status`
@@ -66,6 +67,8 @@ export MINIMAX_API_KEY=<你的 MiniMax 密钥>
 
 # 4) 由 MiniMax 完成代码改动
 .venv/Scripts/python.exe -m sddctx agent --task-id T-001
+# 若改动由助手会话产出（未配置密钥），改为：
+# .venv/Scripts/python.exe -m sddctx agent --task-id T-001 --from-file <模型回复文件>
 
 # 5) 修改后运行目标测试与回归测试（应全部通过）
 .venv/Scripts/python.exe -m sddctx verify --task-id T-001 --label after
@@ -75,7 +78,8 @@ export MINIMAX_API_KEY=<你的 MiniMax 密钥>
 ```
 
 也可以一次跑完：`python scripts/run_verification.py`（每一步的命令、退出码与输出
-写入 `evidence/verification/<时间戳>/`）。
+写入 `evidence/verification/<时间戳>/`）；本次留痕的那一次运行使用了
+`python scripts/run_verification.py --agent-output <模型回复文件>`，其余步骤完全相同。
 
 ## 6. 预期结果
 
@@ -130,15 +134,20 @@ git checkout -- minimax/sample_project/src/orderkit/repository.py
 
 | 证据 | 路径 |
 | --- | --- |
-| 端到端验证逐步日志 | `evidence/verification/<时间戳>/` |
-| 数据库查询记录 | `evidence/database/<时间戳>/database-usage.json` |
-| 规格变更前后对比 | `evidence/spec-update/<时间戳>/comparison.json` |
-| PowerContext 服务重启后读回状态 | `evidence/powercontext/<时间戳>/restart-demo.json` |
-| MiniMax 请求、响应与代码差异 | `evidence/verification/<时间戳>/minimax/` |
+| 端到端验证逐步日志 | `evidence/verification/20261103-193836/` |
+| 数据库查询记录 | `evidence/database/20261103-193913/database-usage.json` |
+| 规格变更前后对比 | `evidence/spec-update/20261103-193916/comparison.json` |
+| PowerContext 服务重启后读回状态 | `evidence/powercontext/20261103-193927/restart-demo.json` |
+| MiniMax 上下文、模型产出与代码差异 | `evidence/verification/20261103-193836/minimax/` |
+| 修改前后 pytest 原始输出 | `evidence/verification/20261103-193836/pytest-logs/` |
 
 其中修改前的目标测试结果为 5 失败 1 通过（失败原因均为 `TypeError: ... unexpected
 keyword argument 'status'`），回归测试 7 条全部通过——证明失败来自目标功能尚未
-实现，而不是环境或依赖问题。
+实现，而不是环境或依赖问题；修改后目标测试 6 条与回归测试 7 条全部通过，两次运行
+的测试集完全一致。
+
+修改前的源码快照保存在分支上改动之前的提交中（`minimax/sample_project/src/orderkit/repository.py`），
+逐行差异见 `evidence/verification/20261103-193836/minimax/change.diff`。
 
 服务重启演示（`scripts/powercontext_restart_demo.py`）会读取任务状态、停止本地
 PowerContext 服务、用同一数据目录重新启动，再次读取状态，结果记录在

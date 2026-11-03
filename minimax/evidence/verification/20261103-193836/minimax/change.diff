@@ -1,0 +1,39 @@
+--- a/src/orderkit/repository.py
++++ b/src/orderkit/repository.py
+@@ -4,7 +4,7 @@
+ 
+ from collections.abc import Iterable
+ 
+-from orderkit.models import Order
++from orderkit.models import Order, OrderStatus
+ 
+ 
+ class OrderRepository:
+@@ -13,9 +13,24 @@
+     def __init__(self, orders: Iterable[Order] = ()) -> None:
+         self._orders = list(orders)
+ 
+-    def list_orders(self) -> list[Order]:
+-        """返回全部订单。"""
+-        return list(self._orders)
++    def list_orders(self, status: OrderStatus | str | None = None) -> list[Order]:
++        """返回订单；给定 status 时只返回状态匹配的订单。"""
++        if status is None:
++            return list(self._orders)
++        wanted = self._parse_status(status)
++        return [order for order in self._orders if order.status == wanted]
++
++    @staticmethod
++    def _parse_status(status: OrderStatus | str) -> OrderStatus:
++        """把状态入参归一化为 OrderStatus，非法取值抛出 ValueError。"""
++        if isinstance(status, OrderStatus):
++            return status
++        text = str(status).strip().lower()
++        for member in OrderStatus:
++            if member.value == text:
++                return member
++        legal = ", ".join(member.value for member in OrderStatus)
++        raise ValueError(f"unknown status {status!r}; legal status values are: {legal}")
+ 
+     def find_by_id(self, order_id: str) -> Order | None:
+         """按订单号查找订单，找不到时返回 None。"""

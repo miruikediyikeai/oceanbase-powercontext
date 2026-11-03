@@ -66,6 +66,12 @@ def _collect_artifacts(evidence_dir: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="运行端到端验证样例")
     parser.add_argument("--skip-agent", action="store_true", help="跳过 MiniMax 代码改动步骤")
+    parser.add_argument(
+        "--agent-output",
+        type=Path,
+        default=None,
+        help="模型回复文件；提供时由该文件提供改动，不调用 MiniMax 开放接口",
+    )
     parser.add_argument("--evidence-dir", type=Path, default=None)
     args = parser.parse_args()
 
@@ -107,10 +113,10 @@ def main() -> int:
     )
 
     if not args.skip_agent:
-        record(
-            "minimax-agent",
-            _run([python, "-m", "sddctx", "agent", "--task-id", TASK_ID], MINIMAX_ROOT, env),
-        )
+        agent_command = [python, "-m", "sddctx", "agent", "--task-id", TASK_ID]
+        if args.agent_output:
+            agent_command += ["--from-file", str(args.agent_output.resolve())]
+        record("minimax-agent", _run(agent_command, MINIMAX_ROOT, env))
 
     record(
         "tests-after",

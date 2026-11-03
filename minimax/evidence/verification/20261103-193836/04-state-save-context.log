@@ -1,0 +1,24 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx state save --task-id T-001
+
+{
+  "task_id": "T-001",
+  "stage": "context_ready",
+  "powercontext": {
+    "scope_id": "scp_28jde4jvfbd50v0jqxbc8d96g5",
+    "memory": {
+      "family": "memory",
+      "artifact_id": "memory",
+      "revision": 22
+    },
+    "citation": {
+      "memory_ref": {
+        "family": "memory",
+        "artifact_id": "memory",
+        "revision": 22
+      },
+      "entry_id": "mem_ent_fdb1c47fedf543d68b9246d315361424",
+      "entry_version_id": "mem_ver_06ff39afac134e9c9710c3154e78e272"
+    }
+  }
+}
+

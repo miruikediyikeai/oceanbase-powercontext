@@ -171,7 +171,8 @@ def _git_executable() -> str:
 def apply_diff(project_dir: Path, diff: str) -> tuple[bool, str]:
     """在工程目录内应用 diff。"""
     patch_file = project_dir / ".sddctx.patch"
-    patch_file.write_text(diff, encoding="utf-8")
+    # 补丁必须保持 LF 换行，否则与仓库中 LF 结尾的源文件不匹配
+    patch_file.write_text(diff, encoding="utf-8", newline="\n")
     git = _git_executable()
     try:
         check = subprocess.run(
@@ -229,8 +230,21 @@ class MiniMaxAgent:
         self._evidence_dir = data_dir / "agent"
         self._client = MiniMaxClient(settings)
 
-    def run(self, bundle: ContextBundle, files: list[str], task_id: str) -> AgentResult:
-        """执行一次模型协作。"""
+    def run(
+        self,
+        bundle: ContextBundle,
+        files: list[str],
+        task_id: str,
+        *,
+        model_output: str | None = None,
+        output_source: str = "minimax-http",
+    ) -> AgentResult:
+        """执行一次模型协作。
+
+        `model_output` 非空时直接使用该文本作为模型回复（用于模型在助手会话中产出
+        改动的场景），其余流程——提示词组装、diff 提取、应用、留痕——与调用
+        MiniMax 开放接口完全一致。
+        """
         evidence_dir = self._evidence_dir / task_id
         evidence_dir.mkdir(parents=True, exist_ok=True)
 
@@ -251,27 +265,43 @@ class MiniMaxAgent:
         response_path = evidence_dir / "response.json"
         diff_path = evidence_dir / "change.diff"
 
-        try:
-            content, raw = self._client.chat(SYSTEM_PROMPT, user_prompt)
-        except Exception as error:
+        if model_output is not None:
+            content = model_output
             response_path.write_text(
-                json.dumps({"error": str(error), "at": _now()}, ensure_ascii=False, indent=2),
+                json.dumps(
+                    {
+                        "integration": output_source,
+                        "model": self._settings.model,
+                        "content": content,
+                        "captured_at": _now(),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
                 encoding="utf-8",
             )
-            return AgentResult(
-                task_id=task_id,
-                model=self._settings.model,
-                request_path=str(request_path),
-                response_path=str(response_path),
-                diff_path=str(diff_path),
-                applied=False,
-                error=str(error),
-            )
+        else:
+            try:
+                content, raw = self._client.chat(SYSTEM_PROMPT, user_prompt)
+            except Exception as error:
+                response_path.write_text(
+                    json.dumps({"error": str(error), "at": _now()}, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                return AgentResult(
+                    task_id=task_id,
+                    model=self._settings.model,
+                    request_path=str(request_path),
+                    response_path=str(response_path),
+                    diff_path=str(diff_path),
+                    applied=False,
+                    error=str(error),
+                )
 
-        response_path.write_text(
-            json.dumps({**raw, "captured_at": _now()}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+            response_path.write_text(
+                json.dumps({**raw, "captured_at": _now()}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
         diff = extract_diff(content)
         diff_path.write_text(diff, encoding="utf-8")
         if not diff:

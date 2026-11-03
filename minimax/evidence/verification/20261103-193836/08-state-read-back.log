@@ -1,0 +1,69 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx state show --task-id T-001
+
+{
+  "found": true,
+  "source": "powercontext",
+  "task_id": "T-001",
+  "title": "",
+  "description": "为 OrderRepository.list_orders 增加按订单状态筛选的能力，支持状态枚举与状态字符串（忽略大小写），非法状态抛出 ValueError，无匹配时返回空列表。规格见 SPEC-ORD-003。",
+  "stage": "verified",
+  "specs": [
+    "SPEC-ORD-001::SPEC-ORD-001-R2",
+    "SPEC-ORD-003::SPEC-ORD-003-R1",
+    "SPEC-ORD-003::SPEC-ORD-003-R2",
+    "SPEC-ORD-003::SPEC-ORD-003-R3",
+    "SPEC-ORD-003::SPEC-ORD-003-R4"
+  ],
+  "code": [
+    "src/orderkit/models.py::OrderStatus",
+    "src/orderkit/repository.py::OrderRepository",
+    "src/orderkit/repository.py::OrderRepository.list_orders"
+  ],
+  "target_tests": [
+    "tests/test_repository_filter.py::test_list_orders_without_filter_returns_all",
+    "tests/test_repository_filter.py::test_list_orders_filters_by_status",
+    "tests/test_repository_filter.py::test_list_orders_accepts_status_enum",
+    "tests/test_repository_filter.py::test_status_filter_is_case_insensitive",
+    "tests/test_repository_filter.py::test_unknown_status_raises_value_error",
+    "tests/test_repository_filter.py::test_filter_without_match_returns_empty_list"
+  ],
+  "regression_tests": [
+    "tests/test_models.py::test_amount_is_unit_price_times_quantity",
+    "tests/test_models.py::test_non_positive_quantity_is_rejected",
+    "tests/test_models.py::test_status_values_are_stable",
+    "tests/test_pricing.py::test_coupon_is_applied_when_threshold_is_met",
+    "tests/test_pricing.py::test_coupon_is_ignored_below_threshold",
+    "tests/test_pricing.py::test_discount_never_goes_below_zero",
+    "tests/test_pricing.py::test_no_coupon_keeps_amount"
+  ],
+  "done": [
+    "导入并检索工程资料（5 条规格规则、3 个代码符号、6 条目标测试）",
+    "运行目标测试与回归测试（before）",
+    "MiniMax（MiniMax-M2）产出代码改动并应用：src/orderkit/repository.py",
+    "运行目标测试与回归测试（after）"
+  ],
+  "todo": [
+    "按规格实现代码改动",
+    "运行目标测试与回归测试",
+    "记录验证结果"
+  ],
+  "verification": [
+    {
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m pytest tests/test_repository_filter.py::test_list_orders_without_filter_returns_all tests/test_repository_filter.py::test_list_orders_filters_by_status tests/test_repository_filter.py::test_list_orders_accepts_status_enum tests/test_repository_filter.py::test_status_filter_is_case_insensitive tests/test_repository_filter.py::test_unknown_status_raises_value_error tests/test_repository_filter.py::test_filter_without_match_returns_empty_list -q",
+      "exit_code": 0,
+      "kind": "target",
+      "log": "D:/oceanbase-powercontext/minimax/.data/test-logs/T-001-after-target.log",
+      "summary": "......                                                                   [100%]"
+    },
+    {
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m pytest tests/test_models.py tests/test_pricing.py -q",
+      "exit_code": 0,
+      "kind": "regression",
+      "log": "D:/oceanbase-powercontext/minimax/.data/test-logs/T-001-after-regression.log",
+      "summary": ".......                                                                  [100%]"
+    }
+  ],
+  "context_path": "D:/oceanbase-powercontext/minimax/.data/context/T-001.json",
+  "updated_at": "2026-11-03T19:38:58+08:00"
+}
+

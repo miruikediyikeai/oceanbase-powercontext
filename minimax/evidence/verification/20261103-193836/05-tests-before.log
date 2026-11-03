@@ -1,0 +1,23 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx verify --task-id T-001 --label before
+
+{
+  "task_id": "T-001",
+  "stage": "verification_failed",
+  "verification": [
+    {
+      "kind": "target",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m pytest tests/test_repository_filter.py::test_list_orders_without_filter_returns_all tests/test_repository_filter.py::test_list_orders_filters_by_status tests/test_repository_filter.py::test_list_orders_accepts_status_enum tests/test_repository_filter.py::test_status_filter_is_case_insensitive tests/test_repository_filter.py::test_unknown_status_raises_value_error tests/test_repository_filter.py::test_filter_without_match_returns_empty_list -q",
+      "exit_code": 1,
+      "log": "D:/oceanbase-powercontext/minimax/.data/test-logs/T-001-before-target.log",
+      "summary": "FAILED tests/test_repository_filter.py::test_filter_without_match_returns_empty_list"
+    },
+    {
+      "kind": "regression",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m pytest tests/test_models.py tests/test_pricing.py -q",
+      "exit_code": 0,
+      "log": "D:/oceanbase-powercontext/minimax/.data/test-logs/T-001-before-regression.log",
+      "summary": ".......                                                                  [100%]"
+    }
+  ]
+}
+

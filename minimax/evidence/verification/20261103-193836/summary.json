@@ -1,0 +1,48 @@
+{
+  "task_id": "T-001",
+  "task": "为 OrderRepository.list_orders 增加按订单状态筛选的能力，支持状态枚举与状态字符串（忽略大小写），非法状态抛出 ValueError，无匹配时返回空列表。规格见 SPEC-ORD-003。",
+  "generated_at": "2026-11-03T19:39:03+08:00",
+  "evidence_dir": "D:/oceanbase-powercontext/minimax/evidence/verification/20261103-193836",
+  "steps": [
+    {
+      "step": "doctor",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx doctor",
+      "exit_code": 0
+    },
+    {
+      "step": "import",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx import",
+      "exit_code": 0
+    },
+    {
+      "step": "context",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx context --task-id T-001 --task 为 OrderRepository.list_orders 增加按订单状态筛选的能力，支持状态枚举与状态字符串（忽略大小写），非法状态抛出 ValueError，无匹配时返回空列表。规格见 SPEC-ORD-003。",
+      "exit_code": 0
+    },
+    {
+      "step": "state-save-context",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx state save --task-id T-001",
+      "exit_code": 0
+    },
+    {
+      "step": "tests-before",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx verify --task-id T-001 --label before",
+      "exit_code": 1
+    },
+    {
+      "step": "minimax-agent",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx agent --task-id T-001 --from-file D:\\oceanbase-powercontext\\minimax\\.data\\agent\\T-001\\session-output.md",
+      "exit_code": 0
+    },
+    {
+      "step": "tests-after",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx verify --task-id T-001 --label after",
+      "exit_code": 0
+    },
+    {
+      "step": "state-read-back",
+      "command": "D:\\oceanbase-powercontext\\minimax\\.venv\\Scripts\\python.exe -m sddctx state show --task-id T-001",
+      "exit_code": 0
+    }
+  ]
+}

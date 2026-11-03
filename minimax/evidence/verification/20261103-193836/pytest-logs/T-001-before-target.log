@@ -1,0 +1,60 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m pytest tests/test_repository_filter.py::test_list_orders_without_filter_returns_all tests/test_repository_filter.py::test_list_orders_filters_by_status tests/test_repository_filter.py::test_list_orders_accepts_status_enum tests/test_repository_filter.py::test_status_filter_is_case_insensitive tests/test_repository_filter.py::test_unknown_status_raises_value_error tests/test_repository_filter.py::test_filter_without_match_returns_empty_list -q
+
+.FFFFF                                                                   [100%]
+================================== FAILURES ===================================
+_____________________ test_list_orders_filters_by_status ______________________
+
+repository = <orderkit.repository.OrderRepository object at 0x0000013336F28B90>
+
+    def test_list_orders_filters_by_status(repository: OrderRepository) -> None:
+>       orders = repository.list_orders(status="paid")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: OrderRepository.list_orders() got an unexpected keyword argument 'status'
+
+tests\test_repository_filter.py:29: TypeError
+____________________ test_list_orders_accepts_status_enum _____________________
+
+repository = <orderkit.repository.OrderRepository object at 0x0000013336F28F50>
+
+    def test_list_orders_accepts_status_enum(repository: OrderRepository) -> None:
+>       orders = repository.list_orders(status=OrderStatus.SHIPPED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: OrderRepository.list_orders() got an unexpected keyword argument 'status'
+
+tests\test_repository_filter.py:34: TypeError
+___________________ test_status_filter_is_case_insensitive ____________________
+
+repository = <orderkit.repository.OrderRepository object at 0x0000013336F88510>
+
+    def test_status_filter_is_case_insensitive(repository: OrderRepository) -> None:
+>       orders = repository.list_orders(status="PAID")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: OrderRepository.list_orders() got an unexpected keyword argument 'status'
+
+tests\test_repository_filter.py:39: TypeError
+___________________ test_unknown_status_raises_value_error ____________________
+
+repository = <orderkit.repository.OrderRepository object at 0x0000013336F88640>
+
+    def test_unknown_status_raises_value_error(repository: OrderRepository) -> None:
+        with pytest.raises(ValueError) as excinfo:
+>           repository.list_orders(status="unknown")
+E           TypeError: OrderRepository.list_orders() got an unexpected keyword argument 'status'
+
+tests\test_repository_filter.py:45: TypeError
+________________ test_filter_without_match_returns_empty_list _________________
+
+    def test_filter_without_match_returns_empty_list() -> None:
+        only_pending = OrderRepository([Order("o-9", "c-9", OrderStatus.PENDING, 1000, 1)])
+>       assert only_pending.list_orders(status="cancelled") == []
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: OrderRepository.list_orders() got an unexpected keyword argument 'status'
+
+tests\test_repository_filter.py:54: TypeError
+=========================== short test summary info ===========================
+FAILED tests/test_repository_filter.py::test_list_orders_filters_by_status - ...
+FAILED tests/test_repository_filter.py::test_list_orders_accepts_status_enum
+FAILED tests/test_repository_filter.py::test_status_filter_is_case_insensitive
+FAILED tests/test_repository_filter.py::test_unknown_status_raises_value_error
+FAILED tests/test_repository_filter.py::test_filter_without_match_returns_empty_list
+

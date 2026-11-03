@@ -281,7 +281,18 @@ def command_agent(args: argparse.Namespace) -> int:
 
     files = args.files or _candidate_files(bundle, settings.project_dir)
     agent = MiniMaxAgent(settings.minimax, settings.project_dir, settings.data_dir)
-    result = agent.run(bundle, files, args.task_id)
+
+    model_output = None
+    output_source = "minimax-http"
+    if getattr(args, "from_file", None):
+        output_file = Path(args.from_file).resolve()
+        if not output_file.exists():
+            print(f"模型输出文件不存在：{output_file}", file=sys.stderr)
+            return 2
+        model_output = output_file.read_text(encoding="utf-8")
+        output_source = "assistant-session"
+
+    result = agent.run(bundle, files, args.task_id, model_output=model_output, output_source=output_source)
 
     state.stage = "code_modified" if result.applied else "agent_failed"
     state.done.append(
@@ -476,6 +487,11 @@ def build_parser() -> argparse.ArgumentParser:
     agent_parser = subparsers.add_parser("agent", help="用 MiniMax 完成代码改动")
     agent_parser.add_argument("--task-id", required=True)
     agent_parser.add_argument("--files", nargs="*", help="交给模型阅读的源文件")
+    agent_parser.add_argument(
+        "--from-file",
+        default=None,
+        help="直接使用该文件中的模型回复（助手会话产出改动时使用），不调用 MiniMax 开放接口",
+    )
     agent_parser.set_defaults(handler=command_agent)
 
     verify_parser = subparsers.add_parser("verify", help="运行目标测试与回归测试")

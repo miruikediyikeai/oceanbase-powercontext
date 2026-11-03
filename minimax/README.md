@@ -51,7 +51,7 @@
 
 | 技术 | 在本次任务中承担的角色 | 实际接入方式与版本 |
 | --- | --- | --- |
-| MiniMax | 依据检索到的规格与测试，生成 `OrderRepository.list_orders` 的实现改动 | MiniMax 开放接口 HTTP `POST /v1/text/chatcompletion_v2`，模型见 `docs/TECH_RECORD.md` |
+| MiniMax | 依据检索到的规格与测试，生成 `OrderRepository.list_orders` 的实现改动 | 助手会话（会话模型为 MiniMax）产出改动，模块经 `sddctx/agent.py` 的同一条流水线提取、应用并留痕；模块另实现了 MiniMax 开放接口通道 `POST /v1/text/chatcompletion_v2`（模型 `MiniMax-M2`），详见 `docs/TECH_RECORD.md` 第 3 节 |
 | seekdb / OceanBase | 保存规格规则、代码符号、测试用例与导入批次；上下文检索的取数来源 | MySQL 协议直连，seekdb `5.7.25-OceanBase seekdb-v1.4.0.0`，库名 `sdd_context` |
 | PowerContext | 保存任务状态（适用规格、待改代码、测试、已完成/待办、验证结果），模块重启后读回 | PowerContext HTTP Memory API `POST /v1/memory/remember`、`POST /v1/memory/entries/list`，版本见 `requirements.txt` |
 

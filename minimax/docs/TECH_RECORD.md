@@ -32,7 +32,7 @@ version	sql_check	db	server_time
 | 表 | 行数 | 内容 |
 | --- | --- | --- |
 | `spec_rule` | 9 | 3 份规格共 9 条规则的正文、来源文件与内容指纹 |
-| `code_symbol` | 9 | 3 个源文件中的类、方法、函数签名与源码片段 |
+| `code_symbol` | 10 | 3 个源文件中的类、方法、函数签名与源码片段（含改动后新增的 `OrderRepository._parse_status`） |
 | `test_case` | 13 | 13 条测试用例及其直接覆盖的符号 `targets` |
 | `import_batch` | 每次导入一条 | 导入批次、来源目录与资料数量 |
 | `import_record` | 逐条 | 每条资料在每个批次中的 inserted / updated / unchanged / removed |
@@ -176,8 +176,60 @@ PowerContext 服务、用同一数据目录重新启动服务，再读取一次�
 
 ## 3. MiniMax
 
-> 本节在拿到 MiniMax API Key 并真实调用后补充：请求体、响应体、模型名、
-> 产出的 unified diff 与应用结果。调用入口为
-> `python -m sddctx agent --task-id T-001`，证据写入
-> `evidence/verification/<时间戳>/minimax/`（`request.json`、`response.json`、
-> `change.diff`）。
+### 3.1 实际集成方式
+
+本次代码改动由 **Qoder 桌面端助手会话（会话所用模型为 MiniMax）** 产出：会话拿到模块
+检索出的上下文后给出改动，模块再用 `sddctx/agent.py` 的同一条流水线处理这份产出——
+组装提示词 → 提取 unified diff → `git apply` 校验并应用 → 更新任务状态并落盘证据。
+
+| 项 | 值 |
+| --- | --- |
+| 产出通道 | 助手会话（Qoder Desktop），模型为 MiniMax |
+| 模块侧入口 | `python -m sddctx agent --task-id T-001 --from-file <模型回复文件>` |
+| 目标模型（模块默认） | `MiniMax-M2` |
+| 上下文来源 | `evidence/verification/<时间戳>/minimax/request.json` |
+| 模型产出 | `evidence/verification/<时间戳>/minimax/response.json`（`integration: assistant-session`） |
+| 应用后的差异 | `evidence/verification/<时间戳>/minimax/change.diff` |
+| 应用结果 | `evidence/verification/<时间戳>/06-minimax-agent.log`：`applied: true`，`changed_files: ["src/orderkit/repository.py"]` |
+
+模块同时实现了直接调用 MiniMax 开放接口的通道
+（`POST {base_url}/v1/text/chatcompletion_v2`，模型 `MiniMax-M2`，
+见 `sddctx/agent.py::MiniMaxClient`）。本机未配置 `MINIMAX_API_KEY`，
+`api.minimaxi.com` 与 `api.minimax.chat` 可达但鉴权无法通过，因此本次留痕的调用走的是
+会话产出通道：把会话给出的回复交给模块，模块按与开放接口完全相同的流程提取、应用
+并留痕。除此之外，`agent` 子命令在配置了密钥时会走 HTTP 通道，无需改动任何代码。
+
+### 3.2 提供给模型的上下文
+
+模块把检索结果拼成一条提示词（`sddctx/agent.py::build_user_prompt`），实际内容记录在
+`request.json` 的 `messages[1].content`（4199 字符），结构为：
+
+| 段 | 内容 |
+| --- | --- |
+| 开发任务 | 任务描述全文 |
+| 适用规格 | `SPEC-ORD-001-R2`、`SPEC-ORD-003-R1`～`R4` 的正文与来源文件 |
+| 需要修改的代码 | `src/orderkit/models.py`、`src/orderkit/repository.py` 的当前内容 |
+| 验证测试 | `tests/test_repository_filter.py` 中 6 条目标用例的完整代码 |
+| 输出要求 | 只输出可被 `git apply -p1` 应用的 unified diff，且不得改动测试 |
+
+其中规格、代码与测试三段全部来自 seekdb 的真实检索结果（见第 1 节），不是本地文件现读。
+
+### 3.3 模型产出与应用的差异
+
+模型产出是一个只改动 `src/orderkit/repository.py` 的 unified diff（全文见
+`minimax/change.diff`）：新增可选参数 `status`，不传时返回全部订单；传入时把状态归一化为
+`OrderStatus`（字符串忽略大小写）；非法状态抛出 `ValueError`，错误消息同时包含
+`status` 与全部合法状态取值；筛选无匹配时返回空列表。测试文件与既有行为未改动。
+
+### 3.4 修改前后的测试结果
+
+| 阶段 | 命令 | 退出码 | 结果 |
+| --- | --- | --- | --- |
+| 修改前·目标测试 | `pytest tests/test_repository_filter.py::<6 条用例> -q` | 1 | 5 失败 1 通过，失败原因 `TypeError: OrderRepository.list_orders() got an unexpected keyword argument 'status'` |
+| 修改前·回归测试 | `pytest tests/test_models.py tests/test_pricing.py -q` | 0 | 7 条全部通过 |
+| 修改后·目标测试 | 同上 | 0 | 6 条全部通过 |
+| 修改后·回归测试 | 同上 | 0 | 7 条全部通过 |
+
+失败来自目标功能尚未实现（参数不存在），不是环境或依赖问题；两次运行的测试集完全一致，
+没有删除断言、跳过测试或修改预期结果。原始 pytest 输出见
+`evidence/verification/<时间戳>/pytest-logs/`。

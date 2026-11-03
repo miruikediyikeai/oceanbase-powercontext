@@ -88,3 +88,12 @@ unchanged，规格更新后重新导入即为 updated，检索结果随之改变
 提示词，要求模型只输出一个可用 `git apply -p1` 应用的 unified diff。应用前先用
 `git apply --check` 校验，失败时退回 `--unidiff-zero`；两种都失败则记录错误，不
 修改工程文件。请求与响应原文保存在 `.data/agent/<task_id>/`。
+
+模型回复有两种来源，走同一条后续流水线：
+
+| 来源 | 入口 | 记录字段 |
+| --- | --- | --- |
+| MiniMax 开放接口 | `python -m sddctx agent --task-id T-001`（需 `MINIMAX_API_KEY`） | `response.json` 为接口原始响应 |
+| 助手会话产出 | `python -m sddctx agent --task-id T-001 --from-file <回复文件>` | `response.json` 的 `integration` 为 `assistant-session` |
+
+补丁文件以 LF 换行写出，避免与仓库中 LF 结尾的源文件不匹配。

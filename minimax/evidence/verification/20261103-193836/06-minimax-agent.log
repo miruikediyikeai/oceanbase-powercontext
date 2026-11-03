@@ -1,0 +1,15 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx agent --task-id T-001 --from-file D:\oceanbase-powercontext\minimax\.data\agent\T-001\session-output.md
+
+{
+  "task_id": "T-001",
+  "model": "MiniMax-M2",
+  "applied": true,
+  "changed_files": [
+    "src/orderkit/repository.py"
+  ],
+  "error": "",
+  "request": "D:\\oceanbase-powercontext\\minimax\\.data\\agent\\T-001\\request.json",
+  "response": "D:\\oceanbase-powercontext\\minimax\\.data\\agent\\T-001\\response.json",
+  "diff": "D:\\oceanbase-powercontext\\minimax\\.data\\agent\\T-001\\change.diff"
+}
+

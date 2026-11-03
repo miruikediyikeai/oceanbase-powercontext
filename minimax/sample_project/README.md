@@ -32,3 +32,8 @@ python -m pytest tests -q
 
 实现 `SPEC-ORD-003`：为 `OrderRepository.list_orders` 增加按订单状态筛选的能力，
 并处理非法状态与空结果两个边界。详见 `specs/SPEC-ORD-003-order-status-filter.md`。
+
+任务开始时 `list_orders` 还不接受 `status` 参数，`tests/test_repository_filter.py`
+中的 6 条目标用例因此失败；改动由模型依据检索到的规格产出并应用后，6 条目标用例与
+7 条回归用例全部通过。改动前的源码见分支上改动之前的提交，逐行差异见
+`evidence/verification/<时间戳>/minimax/change.diff`。

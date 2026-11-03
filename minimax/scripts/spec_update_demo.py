@@ -22,9 +22,9 @@ MINIMAX_ROOT = Path(__file__).resolve().parent.parent
 TASK_TEXT = "为 OrderRepository.list_orders 增加按订单状态筛选的能力，规格见 SPEC-ORD-003。"
 
 NEW_RULE = """
-## SPEC-ORD-003-R5 筛选结果顺序
+## SPEC-ORD-003-R5 筛选的作用范围
 
-筛选结果按订单号升序返回；未传 `status` 时保持导入顺序不变。
+`status` 筛选只作用于 `list_orders`，不影响 `find_by_id` 的查询结果。
 """
 
 

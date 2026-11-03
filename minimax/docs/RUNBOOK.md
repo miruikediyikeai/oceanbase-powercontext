@@ -115,7 +115,7 @@ cd minimax
 | `context --task-id T-001 --task "<任务描述>" [--title 标题]` | 任务编号与任务描述 | 上下文 JSON（`.data/context/T-001.json`）与可读摘要（`.data/context/T-001.md`），并写入任务状态 |
 | `state save --task-id T-001 [--stage 阶段]` | 任务编号 | PowerContext 写入结果（scope、memory 版本、citation） |
 | `state show --task-id T-001` | 任务编号 | 从 PowerContext 读回的任务状态 JSON |
-| `agent --task-id T-001 [--files 相对路径 ...]` | 任务编号 | MiniMax 调用结果与改动文件清单 |
+| `agent --task-id T-001 [--files 相对路径 ...] [--from-file 模型回复文件]` | 任务编号 | MiniMax 调用结果与改动文件清单 |
 | `verify --task-id T-001 [--label before\|after] [--only target\|regression\|both]` | 任务编号 | 测试命令、退出码、日志路径 |
 | `doctor` | 无 | 数据库、PowerContext、MiniMax 配置的连通性检查 |
 | `stats` | 无 | 数据库中的资料统计 |
@@ -127,6 +127,18 @@ cd minimax
   --task-id T-001 \
   --task "为 OrderRepository.list_orders 增加按订单状态筛选的能力，规格见 SPEC-ORD-003。"
 ```
+
+### 4.1 MiniMax 的两种接入方式
+
+| 方式 | 命令 | 说明 |
+| --- | --- | --- |
+| 开放接口（HTTP） | `python -m sddctx agent --task-id T-001` | 需要 `MINIMAX_API_KEY`；请求 `POST {base_url}/v1/text/chatcompletion_v2`，模型 `MiniMax-M2` |
+| 会话产出 | `python -m sddctx agent --task-id T-001 --from-file <回复文件>` | 把助手会话给出的回复交给模块，按同一条流水线提取并应用 diff |
+
+两种方式共用同一段代码：提示词组装（`build_user_prompt`）、diff 提取（`extract_diff`）、
+`git apply` 应用（`apply_diff`）、证据落盘（`request.json` / `response.json` /
+`change.diff`）。本次提交留痕的改动走的是会话产出方式，原因见
+`docs/TECH_RECORD.md` 第 3 节。
 
 ## 5. 测试命令
 

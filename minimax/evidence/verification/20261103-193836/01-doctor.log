@@ -1,0 +1,30 @@
+$ D:\oceanbase-powercontext\minimax\.venv\Scripts\python.exe -m sddctx doctor
+
+{
+  "project_dir": "D:/oceanbase-powercontext/minimax/sample_project",
+  "database": {
+    "ok": true,
+    "counts": {
+      "spec_rule": 9,
+      "code_symbol": 9,
+      "test_case": 13,
+      "import_batch": 12
+    }
+  },
+  "powercontext": {
+    "ok": true,
+    "base_url": "http://127.0.0.1:8811",
+    "scope_id": "scp_28jde4jvfbd50v0jqxbc8d96g5",
+    "tasks": [
+      "T-001",
+      "T-SPEC-BASE",
+      "T-SPEC-UPDATE"
+    ]
+  },
+  "minimax": {
+    "configured": false,
+    "base_url": "https://api.minimaxi.com",
+    "model": "MiniMax-M2"
+  }
+}
+
