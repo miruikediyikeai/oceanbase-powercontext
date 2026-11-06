@@ -1,0 +1,30 @@
+name: strange-cabinet
+services:
+  memory:
+    build: .
+    command: ["python", "serve_memory.py", "--host", "0.0.0.0", "--data", "/data", "--port", "8811"]
+    volumes: ["memory-data:/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8811/health/live')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  adapter:
+    build: .
+    environment:
+      POWERCONTEXT_URL: http://memory:8811
+      CABINET_TOKEN: ${CABINET_TOKEN:?Set CABINET_TOKEN in .env}
+      DIFY_API_URL: ${DIFY_API_URL:-http://host.docker.internal:5001/v1}
+      DIFY_APP_KEY: ${DIFY_APP_KEY:-}
+      NARRATOR_BASE_URL: ${NARRATOR_BASE_URL:-}
+      NARRATOR_MODEL: ${NARRATOR_MODEL:-}
+      NARRATOR_API_KEY: ${NARRATOR_API_KEY:-}
+    ports: ["127.0.0.1:8812:8812"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      memory:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  memory-data:

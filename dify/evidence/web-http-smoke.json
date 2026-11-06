@@ -1,0 +1,9 @@
+{
+  "execution": "real adapter HTTP; no browser rendering or Dify engine execution",
+  "index_status": 200,
+  "index_has_title": true,
+  "unconfigured_dify_status": 503,
+  "unconfigured_dify_response": {
+    "detail": "请先导入并发布 Dify DSL，将应用 API 密钥配置到服务端 DIFY_APP_KEY。"
+  }
+}

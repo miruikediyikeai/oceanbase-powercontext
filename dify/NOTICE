@@ -1,0 +1,9 @@
+怪奇失物招领处 — Dify × PowerContext competition submission, 2026.
+
+serve_memory.py adapts the initialization pattern from qoder/serve_powercontext.py
+in this repository, licensed under the Apache License, Version 2.0.
+Modifications: cabinet-specific storage directory, ports, configurable bind host,
+and service identity. The Apache-2.0 license text is preserved in LICENSE.
+
+Gameplay, DSL assembly, adapter, verification and optional web interface were
+written for this submission. Third-party dependencies retain their own licenses.

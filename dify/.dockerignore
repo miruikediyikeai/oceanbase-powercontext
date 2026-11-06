@@ -1,0 +1,11 @@
+.venv
+.dify-upstream
+.runtime
+.data
+.env
+__pycache__
+**/__pycache__
+.pytest_cache
+.git
+evidence
+tests

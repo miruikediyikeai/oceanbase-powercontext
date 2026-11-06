@@ -1,0 +1,638 @@
+kind: app
+version: 0.4.0
+dependencies: []
+app:
+  name: 怪奇失物招领处
+  description: 把一件离谱物品交给夜班柜员阿纸。寄存、约定、认领、结案；换个会话，旧梗依然在。默认规则模式，无模型密钥亦可玩；可选AI旁白。
+  icon: 🗃️
+  icon_background: '#E8E5FF'
+  mode: workflow
+  use_icon_as_answer_icon: false
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - id: d9c54ad9-73bc-4433-afd3-96836e24e31e
+    name: cabinet_url
+    value_type: string
+    value: http://host.docker.internal:8812
+    selector:
+    - env
+    - cabinet_url
+    description: 适配器地址；从Dify API容器内必须可达
+  - id: a9bcc160-d9c3-42ca-92c0-eb2f515e60d5
+    name: cabinet_token
+    value_type: secret
+    value: ''
+    selector:
+    - env
+    - cabinet_token
+    description: 与CABINET_TOKEN保持一致，导入后填写
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    nodes:
+    - id: start
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 60
+        y: 240
+      positionAbsolute:
+        x: 60
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: start
+        title: 🎟️ 夜班来访
+        desc: ''
+        selected: false
+        variables:
+        - variable: passport
+          label: 私人通行证（8–64位字母数字，换会话使用同一张）
+          type: text-input
+          required: true
+          max_length: 64
+          options: []
+        - variable: move
+          label: 你想做什么？首次输入：开门
+          type: paragraph
+          required: true
+          max_length: 200
+          options: []
+    - id: pack
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 370
+        y: 240
+      positionAbsolute:
+        x: 370
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: code
+        title: 校验通行证与输入
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import json
+          import re
+          def main(passport: str, move: str) -> dict:
+              if not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", passport):
+                  raise ValueError("通行证须为8–64位字母、数字、下划线或短横线。请使用随机通行证并保密。")
+              if len(move) > 200:
+                  raise ValueError("单次输入最多200字。")
+              return {"body": json.dumps({"passport": passport}), "move": move}
+        variables:
+        - variable: passport
+          value_selector:
+          - start
+          - passport
+        - variable: move
+          value_selector:
+          - start
+          - move
+        outputs:
+          body:
+            type: string
+            children: null
+          move:
+            type: string
+            children: null
+    - id: load
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 680
+        y: 240
+      positionAbsolute:
+        x: 680
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: http-request
+        title: 📖 读取 PowerContext 旧档案
+        desc: ''
+        selected: false
+        method: post
+        url: '{{#env.cabinet_url#}}/memory/load'
+        authorization:
+          type: no-auth
+        headers: |-
+          Content-Type:application/json
+          Authorization:Bearer {{#env.cabinet_token#}}
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#pack.body#}}'
+        timeout:
+          connect: 10
+          read: 45
+          write: 10
+        ssl_verify: true
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 1000
+    - id: game
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 990
+        y: 240
+      positionAbsolute:
+        x: 990
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: code
+        title: 🎭 夜班规则：旧梗影响新回合
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          """This exact source is embedded in the Dify Code node. Standard library only."""
+          import copy
+          import json
+
+
+          def fresh_state():
+              return {"schema": 1, "turn": 0, "score": 0, "items": [], "vow": "", "album": [], "visits": 0}
+
+
+          def main(memory: str, move: str, passport: str, request_id: str) -> dict:
+              envelope = json.loads(memory)
+              if "state" not in envelope:
+                  raise ValueError("记忆读取失败：请检查读取节点 HTTP 状态。")
+              state = copy.deepcopy(envelope["state"] or fresh_state())
+              move = move.strip()
+              title = "🗃️ 怪奇失物招领处 · 夜班柜员阿纸"
+              messages = []
+              def say(text):
+                  messages.append(text)
+              if move in ("", "帮助", "开门", "看看"):
+                  state["visits"] += 1
+                  if state["visits"] > 1:
+                      say("你又来了。别装第一次来，你的档案夹自己跑到柜台上了。")
+                  else:
+                      say("欢迎来到不存在的负一楼。这里寄存的不是东西，是东西惹出来的麻烦。")
+                  if state["vow"]:
+                      say("我还记着你的约定：「" + state["vow"] + "」。违约的话，订书机会打嗝。")
+                  if state["album"]:
+                      old = state["album"][-1]
+                      say("上次结案你拿到了「" + old["title"] + "」，那件「" + old["souvenir"] + "」至今还在员工培训里当反面教材。")
+                  say("**三步玩一局**\n1. `寄存 物品名 | 离谱来历`（最多三件）\n2. `约定 一句约定`，或 `认领 物品名 | 包含来历中至少两个连续字的证词`\n3. `结案`，领取专属收据。\n随时输入 `看看` 回访；同一张通行证换个会话仍能接上。")
+              elif move.startswith("寄存 "):
+                  parts = move[3:].split("|", 1)
+                  if len(parts) != 2 or not parts[0].strip() or not parts[1].strip():
+                      say("柜员把空白表格推回来：格式是 `寄存 物品名 | 离谱来历`。")
+                  else:
+                      name, origin = (part.strip() for part in parts)
+                      if len(name) > 28 or len(origin) > 100 or len("".join(c for c in origin if c.isalnum())) < 2:
+                          say("这张表装不下：物品名最多28字，来历最多100字，且至少含两个文字或数字。")
+                      elif any(item["name"] == name for item in state["items"]):
+                          say("「" + name + "」已经在柜子里了。请别把同一个宇宙折叠两次。")
+                      elif len(state["items"]) >= 3:
+                          say("柜子已满。先结案开下一班，三件东西已经让抽屉长腿了。")
+                      else:
+                          state["items"].append({"name": name, "origin": origin, "claimed": False})
+                          state["turn"] += 1
+                          state["score"] += 2
+                          say("已寄存「" + name + "」。来历：「" + origin + "」。\n阿纸盖章：本处第一次接待这种麻烦，保管费收你两个不存在的硬币。离谱值 +2。")
+                          if len(state["items"]) >= 2:
+                              prior = state["items"][-2]
+                              say("连锁事故：它和「" + prior["name"] + "」住隔壁。前者负责「" + origin + "」，后者负责「" + prior["origin"] + "」——物业已经辞职。")
+              elif move.startswith("约定 "):
+                  vow = move[3:].strip()
+                  if not vow or len(vow) > 100:
+                      say("约定要有内容，而且最多100字。")
+                  else:
+                      old = state["vow"]
+                      state["vow"] = vow
+                      state["turn"] += 1
+                      say("我把「" + vow + "」写进了值班守则。下次你来，我会主动提醒。")
+                      if old:
+                          say("原约定「" + old + "」已被替换，旧订书机申请退休。")
+              elif move.startswith("认领 "):
+                  parts = move[3:].split("|", 1)
+                  item = next((x for x in state["items"] if x["name"] == parts[0].strip()), None)
+                  if len(parts) != 2:
+                      say("请递交 `认领 物品名 | 证词`。证明你知道它的来历就行。")
+                  elif not item:
+                      say("查无此物。先输入 `看看` 核对物品名。")
+                  elif item["claimed"]:
+                      say("「" + item["name"] + "」已经认领，不能重复赚离谱值。")
+                  else:
+                      proof = parts[1].strip()
+                      if len(proof) > 150:
+                          say("证词最多150字，柜员没有那么长的午休。")
+                      else:
+                          origin = "".join(c for c in item["origin"] if c.isalnum())
+                          evidence = "".join(c for c in proof if c.isalnum())
+                          matched = next((origin[i:i + 2] for i in range(len(origin) - 1)
+                                          if origin[i:i + 2] in evidence), "")
+                          state["turn"] += 1
+                          if matched:
+                              item["claimed"] = True
+                              state["score"] += 3
+                              say("证词核对通过：「" + matched + "」与原档案吻合。领回「" + item["name"] + "」，离谱值 +3。\n记忆回声：你当时写的是「" + item["origin"] + "」。我可没忘。")
+                          else:
+                              say("驳回：证词没有和原来历对上。小提示：来历是「" + item["origin"] + "」。找出至少两个连续字，再来骗……再来认领。")
+              elif move == "结案":
+                  if not state["items"]:
+                      say("没有物品不能结案。先寄存一件奇怪的东西吧。")
+                  else:
+                      count = sum(x["claimed"] for x in state["items"])
+                      badge = "宇宙级烂摊子收藏家" if state["score"] >= 10 else "负一楼常驻编外人员"
+                      souvenir = state["items"][0]["name"]
+                      say("### 🧾 夜班结案收据\n称号：**" + badge + "**\n离谱值：" + str(state["score"]) +
+                          " · 已认领：" + str(count) + "/" + str(len(state["items"])) +
+                          "\n本班展品：" + "、".join(x["name"] for x in state["items"]) +
+                          "\n留给下次的暗号：「" + souvenir + "」" +
+                          ("\n仍然有效的约定：「" + state["vow"] + "」" if state["vow"] else "") +
+                          "\n\n本班已归档，柜子已腾空。下次开门，阿纸会记得你的称号、暗号和约定。")
+                      state["album"] = (state["album"] + [{"title": badge, "souvenir": souvenir}])[-3:]
+                      state["items"], state["turn"], state["score"] = [], 0, 0
+              else:
+                  say("阿纸把你的话夹进了‘尚未发明的业务’。输入 `看看` 获取玩法；业务前缀要有空格。")
+              if move != "结案" and state["items"]:
+                  say("**柜中清单**\n" + "\n".join("- " + x["name"] + (" · 已领回" if x["claimed"] else " · 待认领") for x in state["items"]) +
+                      "\n离谱值：" + str(state["score"]))
+              result = title + "\n\n" + "\n\n".join(messages)
+              payload = {"passport": passport, "request_id": request_id,
+                         "expected_version": envelope["version"], "state": state, "result": result}
+              return {"payload": json.dumps(payload, ensure_ascii=False), "result": result}
+        variables:
+        - variable: memory
+          value_selector:
+          - load
+          - body
+        - variable: move
+          value_selector:
+          - pack
+          - move
+        - variable: passport
+          value_selector:
+          - start
+          - passport
+        - variable: request_id
+          value_selector:
+          - sys
+          - workflow_run_id
+        outputs:
+          payload:
+            type: string
+            children: null
+          result:
+            type: string
+            children: null
+    - id: commit
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 1300
+        y: 240
+      positionAbsolute:
+        x: 1300
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: http-request
+        title: 💾 保存玩家选择和新状态
+        desc: ''
+        selected: false
+        method: post
+        url: '{{#env.cabinet_url#}}/memory/commit'
+        authorization:
+          type: no-auth
+        headers: |-
+          Content-Type:application/json
+          Authorization:Bearer {{#env.cabinet_token#}}
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#game.payload#}}'
+        timeout:
+          connect: 10
+          read: 45
+          write: 10
+        ssl_verify: true
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 1000
+    - id: confirm
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 1610
+        y: 240
+      positionAbsolute:
+        x: 1610
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: code
+        title: 确认保存成功再反馈
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import json
+          def main(body: str, status: int) -> dict:
+              value = json.loads(body)
+              if status != 200:
+                  raise ValueError(str(value.get("detail", "回合未确认保存，请看看后重试。")))
+              return {"body": json.dumps({"text": value["text"]}, ensure_ascii=False),
+                      "text": value["text"], "version": value["version"],
+                      "citation": json.dumps(value["citation"], ensure_ascii=False)}
+        variables:
+        - variable: body
+          value_selector:
+          - commit
+          - body
+        - variable: status
+          value_selector:
+          - commit
+          - status_code
+        outputs:
+          body:
+            type: string
+            children: null
+          text:
+            type: string
+            children: null
+          version:
+            type: number
+            children: null
+          citation:
+            type: string
+            children: null
+    - id: narrate
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 1920
+        y: 240
+      positionAbsolute:
+        x: 1920
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: http-request
+        title: ✨ 可选 AI 旁白（默认规则剧场）
+        desc: ''
+        selected: false
+        method: post
+        url: '{{#env.cabinet_url#}}/narrate'
+        authorization:
+          type: no-auth
+        headers: |-
+          Content-Type:application/json
+          Authorization:Bearer {{#env.cabinet_token#}}
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#confirm.body#}}'
+        timeout:
+          connect: 10
+          read: 45
+          write: 10
+        ssl_verify: true
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 1000
+        error_strategy: default-value
+        default_value:
+        - key: body
+          type: string
+          value: '{}'
+        - key: status_code
+          type: number
+          value: 503
+    - id: render
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 2230
+        y: 240
+      positionAbsolute:
+        x: 2230
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: code
+        title: 展示回执与运行模式
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import json
+          def main(body: str, status: int, saved_text: str) -> dict:
+              try:
+                  value = json.loads(body)
+                  if status == 200 and isinstance(value.get("text"), str):
+                      return {"text": value["text"]}
+              except (ValueError, TypeError):
+                  pass
+              return {"text": saved_text + "\n\n🎭 旁白服务暂不可用，回合已保存。"}
+        variables:
+        - variable: body
+          value_selector:
+          - narrate
+          - body
+        - variable: status
+          value_selector:
+          - narrate
+          - status_code
+        - variable: saved_text
+          value_selector:
+          - confirm
+          - text
+        outputs:
+          text:
+            type: string
+            children: null
+    - id: end
+      type: custom
+      width: 250
+      height: 100
+      position:
+        x: 2540
+        y: 240
+      positionAbsolute:
+        x: 2540
+        y: 240
+      sourcePosition: right
+      targetPosition: left
+      selected: false
+      data:
+        type: end
+        title: 🧾 柜员回执
+        desc: ''
+        selected: false
+        outputs:
+        - variable: text
+          value_selector:
+          - render
+          - text
+          value_type: string
+        - variable: memory_version
+          value_selector:
+          - confirm
+          - version
+          value_type: number
+        - variable: memory_citation
+          value_selector:
+          - confirm
+          - citation
+          value_type: string
+    edges:
+    - id: start-pack
+      source: start
+      target: pack
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: start
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: pack-load
+      source: pack
+      target: load
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: load-game
+      source: load
+      target: game
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: game-commit
+      source: game
+      target: commit
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: commit-confirm
+      source: commit
+      target: confirm
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: confirm-narrate
+      source: confirm
+      target: narrate
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: narrate-render
+      source: narrate
+      target: render
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    - id: render-end
+      source: render
+      target: end
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: end
+        isInIteration: false
+        isInLoop: false
+      zIndex: 0
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.65

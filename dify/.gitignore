@@ -1,0 +1,8 @@
+.venv/
+.dify-upstream/
+.runtime/
+.data/
+__pycache__/
+.pytest_cache/
+.env
+*.pyc
