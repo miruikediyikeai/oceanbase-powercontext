@@ -1,37 +1,41 @@
-# 实际运行证据与验收缺口
+# 实际运行证据
 
-检查日期：2026-11-06，Asia/Shanghai。所有 passed 项均来自实际执行；没有生成、改写或伪造 Dify 引擎执行记录。
+验证日期：2026-11-06。所有 passed 项来自实际执行。JSON 为脚本记录的真实结果；没有模拟 Dify API、伪造节点状态或使用适配器代替 Dify 执行规则。
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 真实 PowerContext 1.2.0 HTTP 读写 | 通过 | `powercontext-verification.json` 的逐轮 citation 和直接 API 读回 |
-| 十轮连续玩法，按旧来历认领和按旧约定接梗 | 通过 | 同上 `rounds`，包含失败与成功反馈 |
-| 两个进程重启后持久记忆、版本与引用恢复 | 通过 | 同上 `before_restart` 与 `after_restart` 完全一致 |
-| 其他通行证隔离、版本冲突、提交幂等、离线503 | 通过 | 同上 `checks`；脚本中为真实 HTTP 断言 |
-| 规则边界与模型失败契约测试 | 12 项通过 | `tests.txt`；模型 HTTP 响应为测试合成，不是真实模型调用 |
-| 网页 HTML 实际返回和未配置 Dify 的错误提示 | 通过 | `web-http-smoke.json`，仅 HTTP 检查 |
-| 浏览器页面渲染与交互 | 未验证 | 截图命令被自动审批策略阻止，未交付截图 |
-| 真实 Dify 引擎导入、节点运行、发布后完整体验 | **未验证** | WSL 所在 D 盘空间耗尽，启动失败；应运行 `scripts/verify_dify.py` 补齐 |
-| 配套 Compose 容器构建与启动 | 未验证 | 同一 WSL 环境限制；当前真实验证使用原生 Windows Python |
-| 真实 AI 模型润色 | 未配置 / 未验证 | 按用户选项先交付无需密钥版本；不声称模型调用成功 |
+| 交付 DSL 重新导入、绑定 secret / 服务地址、发布 | 通过 | `dify-import.json`：真实 Dify 1.9.1 控制台 API、DSL 0.4.0、9 个节点、文件哈希 |
+| 完整玩法、跨 Dify 用户回访、配套 `/play` 入口 | 8 次真实 Dify 运行通过 | `dify-verification.json`：逐轮 run ID、正文、记忆版本及 citation |
+| 九个节点逐轮执行 | 72 条全部 succeeded | 同上 `node_traces`：控制台 API 实际读回，保留节点 ID / 类型 / 状态 / 耗时 |
+| 部署容器重启后持久化与回访 | 另 4 次真实 Dify 运行通过 | `deployed-restart.json`：先寄存 / 约定 / 结案，实际重启 memory 与 adapter，再用新 Dify 用户开门 |
+| 重启前后状态一致、原始 PowerContext API 读回 | 通过 | 同上 `before_restart == after_restart`，含 state / version / scope / citation；`powercontext_direct_readback` 与存档匹配 |
+| 镜像构建及独立 Compose 部署 | 9 个容器运行，依赖检查通过 | `deployment.json`：实际镜像 ID / digest、Linux amd64、包版本、容器状态、`pip check` |
+| 原生真实 PowerContext 十轮交互与故障 / 一致性边界 | 通过 | `powercontext-verification.json`：隔离、版本冲突、提交幂等、进程重启及离线 503；明确不是 Dify 引擎证据 |
+| 规则边界与模型失败契约测试 | 12 项通过 | `tests.txt`；模型 HTTP 响应为测试合成，不代表真实模型调用 |
+| 作品 HTML 返回和服务密钥不出现在 HTML | 通过 | `dify-verification.json` 的 HTTP 检查；原有 `web-http-smoke.json` 另记录未配置 Dify 时的错误提示 |
+| 浏览器渲染 / 点击、可选 Dify studio profile | 未验证 | 当前证据覆盖 HTML HTTP 返回与后端入口，未交付浏览器截图 |
+| 可选真实 AI 润色 | 未配置 / 未验证 | 按用户要求交付无密钥规则模式，未声称调用真实模型 |
 
-## 环境限制的实际经过
+## PowerContext 如何影响玩法
 
-本机最初存在可运行的 WSL2 Ubuntu 22.04，约 12 GB RAM。开发过程中下载了 Dify API 1.9.1、sandbox 0.2.12、PostgreSQL 和 Redis 镜像；下载 Dify Web 时 Docker 返回 `input/output error`。随后确认 Ubuntu 的 VHD 位于 `D:\WSL\Ubuntu-22.04`，D 盘可用空间仅约 2 MB，WSL 启动返回 `Wsl/Service/CreateInstance/E_FAIL`。未删除用户的其他文件，未重建或注销用户发行版。
+`dify-verification.json` 的寄存回合保存“会打嗝的月亮 / 每周五变成奶酪”，后续错误证词被驳回，含“奶酪”的证词通过；结案后换 Dify API 用户，仍引用“咕叽”和旧纪念物。每轮的 `memory_citation` 来自真实 PowerContext entry version。
 
-已成功下载的公开镜像摘要（只证明镜像获取，不证明服务运行）：
+`deployed-restart.json` 在保留命名卷的前提下实际重启两个配套容器，先核对完整状态、应用版本号和精确引用不变，再通过真实 PowerContext `entries/list` 读回并执行 Dify 回访。记忆参与后续业务结果，且不依赖进程内缓存或仅检查连接成功。
 
-- `langgenius/dify-api:1.9.1`：`sha256:c38936ee0149f8fabfb5f02ac716c545aa758ceef78c2369c733a86f8713aad4`
-- `langgenius/dify-sandbox:0.2.12`：`sha256:4e65e8a351a2b17d11750b65403527a347e5cb938bc2271521ca7d689c008ad3`
+## 复现
 
-真实 PowerContext 与适配器在 Windows CPython 3.13.9 上重新完成验证，使用独立目录和空闲端口；验证结束后已终止脚本自身创建的服务。JSON 不包含服务密钥、通行证或用户已有存档。运行目录和原始数据库不提交，复现由脚本自动生成。
+按 [独立本地环境](../docs/LOCAL_DIFY.md) 从新配置启动、导入、发布，然后运行：
 
-## 补齐最终 Dify 验收
-
-释放 WSL 所在分区空间，或换用可用的 Dify 1.9.1 环境，按 `docs/RUNBOOK.md` 重新导入、绑定环境变量并发布应用，然后运行：
-
-```powershell
-.\.venv\Scripts\python.exe scripts/verify_dify.py --output .runtime/dify-verification.json
+```bash
+python scripts/verify_dify.py --console-traces --web-url http://127.0.0.1:8812
+python scripts/verify_deployed_restart.py
+python scripts/record_deployment.py
 ```
 
-全部成功后再将生成的真实 JSON 审核、脱敏并放入证据目录；更新本表中的未验证状态。当前交付不能声称已经通过完整的赛事基础验收。
+Windows 上调用 WSL 内 Docker 时，为后两条加 `--wsl-distro Ubuntu-22.04`。所有脚本生成新随机通行证，初始存档为空，不删除已有玩家数据。结果写入 Git 忽略的 `.runtime/`；审核后再复制公开证据。
+
+实际构建使用 Docker Engine / Compose（版本见 deployment.json）、`python:3.13.9-slim`、固定约束与 HTTPS 清华 PyPI 镜像。WSL 自定义内核的模块加载、会话保活和重建网络步骤已写入运行说明，不依赖未交付的本地配置。Dify 官方工作室网页是可选 profile；默认作品入口为 `http://127.0.0.1:8812`。
+
+## 脱敏范围
+
+公开材料保留自编示例文本、记忆 UUID / citation、Dify run / app ID 和节点状态；不包含服务密钥、应用 API Key、管理员 token / 密码或玩家通行证。节点原始 inputs / process_data / 请求头未导出，避免泄露 HTTP Authorization。DSL 哈希按 UTF-8 / LF 计算，与导入 API 实际接收的文本一致，可跨 Windows / Linux 核对。原始数据库、`.env` 和虚拟环境不提交。

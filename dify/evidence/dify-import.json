@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "execution": "actual Dify 1.9.1 console HTTP API",
+  "executed_at": "2026-11-06T20:28:54.028964+08:00",
+  "app_id": "d529fd40-603a-458c-a8df-32797da73ce5",
+  "import_status": "completed",
+  "dsl_sha256": "fe1d7256eeda70b05d1ec879e9ba15436f3e554dfbb47d7f79bd5fc94aae9372",
+  "dsl_hash_encoding": "UTF-8 with LF (same text sent to import API)",
+  "dsl_version": "0.4.0",
+  "published": "success",
+  "node_count": 9,
+  "checks": [
+    "authenticated_real_console",
+    "imported_delivered_dsl_via_console",
+    "bound_service_address_and_secret_in_real_draft",
+    "published_real_workflow"
+  ]
+}

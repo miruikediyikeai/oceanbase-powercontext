@@ -1,8 +1,11 @@
 name: strange-cabinet
 services:
   memory:
+    image: strange-cabinet-app:1.0.0
     build: .
     command: ["python", "serve_memory.py", "--host", "0.0.0.0", "--data", "/data", "--port", "8811"]
+    environment:
+      POWERCONTEXT_TOKEN: ${POWERCONTEXT_TOKEN:-${CABINET_TOKEN}}
     volumes: ["memory-data:/data"]
     restart: unless-stopped
     healthcheck:
@@ -11,9 +14,11 @@ services:
       timeout: 3s
       retries: 30
   adapter:
+    image: strange-cabinet-app:1.0.0
     build: .
     environment:
       POWERCONTEXT_URL: http://memory:8811
+      POWERCONTEXT_TOKEN: ${POWERCONTEXT_TOKEN:-${CABINET_TOKEN}}
       CABINET_TOKEN: ${CABINET_TOKEN:?Set CABINET_TOKEN in .env}
       DIFY_API_URL: ${DIFY_API_URL:-http://host.docker.internal:5001/v1}
       DIFY_APP_KEY: ${DIFY_APP_KEY:-}
@@ -25,6 +30,11 @@ services:
     depends_on:
       memory:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
     restart: unless-stopped
 volumes:
   memory-data:

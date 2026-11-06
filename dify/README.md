@@ -47,17 +47,24 @@ PowerContext 1.2.0 是**唯一游戏状态存储**。每张通行证以 SHA-256 
 | --- | --- |
 | [dsl/strange-cabinet.yml](dsl/strange-cabinet.yml) | 唯一 DSL；Dify 1.9.1、DSL 0.4.0；无需导入其他 DSL |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | 安装、网络、服务地址绑定、发布、模型配置、限制 |
+| [docs/LOCAL_DIFY.md](docs/LOCAL_DIFY.md) | 已实测的独立 Dify Compose 环境；自动导入、发布及完整引擎验证 |
 | [docs/VERIFICATION.md](docs/VERIFICATION.md) | 初始状态、完整体验顺序、预期表现、重置方式 |
 | [docs/ENGINEERING.md](docs/ENGINEERING.md) | 数据结构、一致性、来源与可追溯技术说明 |
 | [evidence/README.md](evidence/README.md) | 实际已验证项和未完成项，避免混淆模拟与真实运行 |
 | `game.py` / `scripts/build_dsl.py` | 核心规则源码及可重复生成 DSL 的工具 |
 | `app.py` / `serve_memory.py` | 配套 HTTP 服务及真实 PowerContext 启动器 |
 | `static/index.html` | 可选的单页体验窗口，通过 Dify API 游玩 |
-| `compose.yaml` / `Dockerfile` | 配套服务容器配置；Dify 使用官方 1.9.1 部署 |
+| `compose.yaml` / `compose.dify.yaml` / `Dockerfile` | 配套服务与官方 Dify 1.9.1 引擎容器配置 |
 | `scripts/verify.py` | 真实记忆服务、HTTP 适配器、DSL 内规则源码及进程重启验证 |
 | `scripts/verify_dify.py` | 对已发布的真实 Dify 应用执行完整样例，生成引擎运行证据 |
+| `scripts/verify_deployed_restart.py` | 重启真实部署的配套容器，核对持久化及 Dify 回访 |
+| `scripts/record_deployment.py` | 记录镜像摘要、容器状态、包版本与 DSL 哈希，排除凭据 |
 
-目前真实 PowerContext 与适配器的连续交互、隔离、并发冲突、重试、重启恢复和故障验证已通过，另有 12 项测试通过（8 项规则回归、4 项模型失败响应契约）。**真实 Dify 引擎导入与执行尚未验证**：本机 WSL 所在 D 盘空间耗尽，Docker 无法继续启动。完整说明见运行证据目录；不能将独立规则执行记录视为 Dify 节点执行记录。提供了实际引擎验证脚本，仍须在可用的 Dify 环境中完成验收。
+**真实 Dify 1.9.1 导入、绑定、发布与执行已通过。** 完整验收的 8 次运行包含 72 条全部成功的节点记录，以及配套 `/play` 入口调用；另有 4 次真实 Dify 运行验证容器重启后仍复用旧约定和纪念物。PowerContext 重启前后 state、version、scope、citation 完全一致，并通过其原始 API 读回核对。9 个部署容器已运行，镜像 / 包版本、逐轮输出和脱敏节点证据见 [运行证据](evidence/README.md)。原生十轮集成验证及 12 项规则 / 模型失败契约测试也已通过；默认无模型密钥即可体验。
+
+## 快速启动完整作品
+
+推荐首次体验按 [独立本地 Dify 环境](docs/LOCAL_DIFY.md) 操作：安装宿主机工具依赖、生成随机本地配置、启动 Compose、运行 `scripts/configure_dify.py --initialize`，最后重新创建适配器以读取应用 key。无需预置数据或模型供应商。入口是 [本地窗口](http://127.0.0.1:8812)，运行时由真实 Dify 编排每个回合。
 
 ## 快速启动配套服务
 

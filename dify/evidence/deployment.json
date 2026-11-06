@@ -1,0 +1,149 @@
+{
+  "status": "passed",
+  "executed_at": "2026-11-06T12:40:19.591686+00:00",
+  "docker": "Docker version 29.1.3, build 29.1.3-0ubuntu3~22.04.2",
+  "compose": "2.40.3+ds1-0ubuntu1~22.04.1",
+  "containers": [
+    {
+      "Service": "adapter",
+      "Image": "strange-cabinet-app:1.0.0",
+      "State": "running",
+      "Health": "healthy",
+      "Status": "Up 34 seconds (healthy)"
+    },
+    {
+      "Service": "api",
+      "Image": "langgenius/dify-api:1.9.1",
+      "State": "running",
+      "Health": "healthy",
+      "Status": "Up 3 minutes (healthy)"
+    },
+    {
+      "Service": "db",
+      "Image": "postgres:15-alpine",
+      "State": "running",
+      "Health": "healthy",
+      "Status": "Up 3 minutes (healthy)"
+    },
+    {
+      "Service": "memory",
+      "Image": "strange-cabinet-app:1.0.0",
+      "State": "running",
+      "Health": "healthy",
+      "Status": "Up 33 seconds (healthy)"
+    },
+    {
+      "Service": "plugin_daemon",
+      "Image": "langgenius/dify-plugin-daemon:0.3.0-local",
+      "State": "running",
+      "Health": "",
+      "Status": "Up 3 minutes"
+    },
+    {
+      "Service": "redis",
+      "Image": "redis:6-alpine",
+      "State": "running",
+      "Health": "",
+      "Status": "Up 3 minutes"
+    },
+    {
+      "Service": "sandbox",
+      "Image": "langgenius/dify-sandbox:0.2.12",
+      "State": "running",
+      "Health": "healthy",
+      "Status": "Up About a minute (healthy)"
+    },
+    {
+      "Service": "ssrf_proxy",
+      "Image": "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029",
+      "State": "running",
+      "Health": "",
+      "Status": "Up 3 minutes"
+    },
+    {
+      "Service": "worker",
+      "Image": "langgenius/dify-api:1.9.1",
+      "State": "running",
+      "Health": "",
+      "Status": "Up 2 minutes"
+    }
+  ],
+  "images": [
+    {
+      "image": "langgenius/dify-api:1.9.1",
+      "id": "sha256:c38936ee0149f8fabfb5f02ac716c545aa758ceef78c2369c733a86f8713aad4",
+      "digests": [
+        "langgenius/dify-api@sha256:c38936ee0149f8fabfb5f02ac716c545aa758ceef78c2369c733a86f8713aad4"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    {
+      "image": "langgenius/dify-plugin-daemon:0.3.0-local",
+      "id": "sha256:22fb3bed3803b094b779a1db2684797e2feeae339f9612273fec7db14ecd03cd",
+      "digests": [
+        "langgenius/dify-plugin-daemon@sha256:22fb3bed3803b094b779a1db2684797e2feeae339f9612273fec7db14ecd03cd"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    {
+      "image": "langgenius/dify-sandbox:0.2.12",
+      "id": "sha256:4e65e8a351a2b17d11750b65403527a347e5cb938bc2271521ca7d689c008ad3",
+      "digests": [
+        "langgenius/dify-sandbox@sha256:4e65e8a351a2b17d11750b65403527a347e5cb938bc2271521ca7d689c008ad3"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    {
+      "image": "postgres:15-alpine",
+      "id": "sha256:aae6554de426ae1990f1a939ff183a0299146cf7142a6f4c379c3357af9cc2d8",
+      "digests": [
+        "postgres@sha256:aae6554de426ae1990f1a939ff183a0299146cf7142a6f4c379c3357af9cc2d8"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    {
+      "image": "redis:6-alpine",
+      "id": "sha256:5e38c443bd83d7d5214648d5de0a7d47f72cbb5141c50dcabcfc40f191b5b369",
+      "digests": [
+        "redis@sha256:5e38c443bd83d7d5214648d5de0a7d47f72cbb5141c50dcabcfc40f191b5b369"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    {
+      "image": "strange-cabinet-app:1.0.0",
+      "id": "sha256:28b8f1e91f2247d3bf89b502be452fb2f0e08168c232816a692e75f405f6b333",
+      "digests": [
+        "strange-cabinet-app@sha256:28b8f1e91f2247d3bf89b502be452fb2f0e08168c232816a692e75f405f6b333"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    {
+      "image": "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029",
+      "id": "sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029",
+      "digests": [
+        "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    }
+  ],
+  "runtime": {
+    "python": "3.13.9 (main, Nov 18 2025, 05:56:58) [GCC 14.2.0]",
+    "packages": {
+      "powercontext": "1.2.0",
+      "fastapi": "0.135.1",
+      "httpx": "0.28.1",
+      "uvicorn": "0.41.0",
+      "rpds-py": "0.27.1"
+    }
+  },
+  "dependency_check": "No broken requirements found.",
+  "dsl_sha256": "fe1d7256eeda70b05d1ec879e9ba15436f3e554dfbb47d7f79bd5fc94aae9372",
+  "dsl_hash_encoding": "UTF-8 with LF (same text sent to import API)"
+}

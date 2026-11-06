@@ -1,0 +1,143 @@
+# Add to compose.yaml: docker compose -f compose.yaml -f compose.dify.yaml up --build -d
+# This is a dedicated local Dify installation, with no model or vector-store dependency.
+x-dify-env: &dify-env
+  SECRET_KEY: ${DIFY_SECRET_KEY:?Set DIFY_SECRET_KEY in .env}
+  DB_USERNAME: postgres
+  DB_PASSWORD: ${DIFY_DB_PASSWORD:?Set DIFY_DB_PASSWORD in .env}
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_DATABASE: dify
+  REDIS_HOST: redis
+  REDIS_PORT: '6379'
+  REDIS_PASSWORD: ${DIFY_REDIS_PASSWORD:?Set DIFY_REDIS_PASSWORD in .env}
+  CELERY_BROKER_URL: redis://:${DIFY_REDIS_PASSWORD}@redis:6379/1
+  CODE_EXECUTION_ENDPOINT: http://sandbox:8194
+  CODE_EXECUTION_API_KEY: ${DIFY_SANDBOX_KEY:?Set DIFY_SANDBOX_KEY in .env}
+  PLUGIN_DAEMON_URL: http://plugin_daemon:5002
+  PLUGIN_DAEMON_KEY: ${DIFY_PLUGIN_KEY:?Set DIFY_PLUGIN_KEY in .env}
+  INNER_API_KEY_FOR_PLUGIN: ${DIFY_PLUGIN_INNER_KEY:?Set DIFY_PLUGIN_INNER_KEY in .env}
+  SSRF_PROXY_HTTP_URL: http://ssrf_proxy:3128
+  SSRF_PROXY_HTTPS_URL: http://ssrf_proxy:3128
+  STORAGE_TYPE: opendal
+  OPENDAL_SCHEME: fs
+  OPENDAL_FS_ROOT: storage
+  LOG_LEVEL: WARNING
+  CHECK_UPDATE_URL: ''
+  MIGRATION_ENABLED: 'false'
+services:
+  adapter:
+    extra_hosts: !reset []
+    environment:
+      DIFY_API_URL: http://api:5001/v1
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DIFY_DB_PASSWORD}
+      POSTGRES_DB: dify
+    volumes: ["dify-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dify"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  redis:
+    image: redis:6-alpine
+    command: ["redis-server", "--requirepass", "${DIFY_REDIS_PASSWORD}"]
+    volumes: ["dify-redis:/data"]
+    restart: unless-stopped
+  api:
+    image: langgenius/dify-api:1.9.1
+    environment:
+      <<: *dify-env
+      MODE: api
+      MIGRATION_ENABLED: 'true'
+      SERVER_WORKER_AMOUNT: '1'
+      CONSOLE_CORS_ALLOW_ORIGINS: http://127.0.0.1:8080
+      WEB_API_CORS_ALLOW_ORIGINS: http://127.0.0.1:8080
+    ports: ["127.0.0.1:5001:5001"]
+    volumes: ["dify-storage:/app/api/storage"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/app/api/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/console/api/setup', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 36
+      start_period: 20s
+    restart: unless-stopped
+  worker:
+    image: langgenius/dify-api:1.9.1
+    environment:
+      <<: *dify-env
+      MODE: worker
+      CELERY_WORKER_AMOUNT: '1'
+    volumes: ["dify-storage:/app/api/storage"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  sandbox:
+    image: langgenius/dify-sandbox:0.2.12
+    environment:
+      API_KEY: ${DIFY_SANDBOX_KEY}
+      GIN_MODE: release
+      # Dify 1.9.1 always sends enable_network=true, including for pure Python code.
+      ENABLE_NETWORK: 'true'
+      HTTP_PROXY: http://ssrf_proxy:3128
+      HTTPS_PROXY: http://ssrf_proxy:3128
+      WORKER_TIMEOUT: '15'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8194/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  plugin_daemon:
+    image: langgenius/dify-plugin-daemon:0.3.0-local
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DIFY_DB_PASSWORD}
+      DB_DATABASE: dify_plugin
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${DIFY_REDIS_PASSWORD}
+      SERVER_KEY: ${DIFY_PLUGIN_KEY}
+      SERVER_PORT: '5002'
+      DIFY_INNER_API_URL: http://api:5001
+      DIFY_INNER_API_KEY: ${DIFY_PLUGIN_INNER_KEY}
+      PLUGIN_STORAGE_LOCAL_ROOT: /app/storage
+      PLUGIN_WORKING_PATH: /app/storage/cwd
+      PLUGIN_REMOTE_INSTALLING_HOST: 0.0.0.0
+      PLUGIN_REMOTE_INSTALLING_PORT: '5003'
+    volumes: ["dify-plugins:/app/storage"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+  ssrf_proxy:
+    image: ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+    volumes: ["./deploy/squid.conf:/etc/squid/squid.conf:ro"]
+    restart: unless-stopped
+  web:
+    image: langgenius/dify-web:1.9.1
+    profiles: ["studio"]
+    environment:
+      CONSOLE_API_URL: http://127.0.0.1:5001
+      APP_API_URL: http://127.0.0.1:5001
+      NEXT_TELEMETRY_DISABLED: '1'
+    ports: ["127.0.0.1:8080:3000"]
+    restart: unless-stopped
+volumes:
+  dify-db:
+  dify-redis:
+  dify-storage:
+  dify-plugins:

@@ -1,0 +1,721 @@
+{
+  "status": "passed",
+  "execution": "actual published Dify Workflow service API",
+  "executed_at": "2026-11-06T20:39:18.695553+08:00",
+  "rounds": [
+    {
+      "input": "开门",
+      "workflow_run_id": "9bb7bf5b-44c7-4b4b-99d7-a54284f76492",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n欢迎来到不存在的负一楼。这里寄存的不是东西，是东西惹出来的麻烦。\n\n**三步玩一局**\n1. `寄存 物品名 | 离谱来历`（最多三件）\n2. `约定 一句约定`，或 `认领 物品名 | 包含来历中至少两个连续字的证词`\n3. `结案`，领取专属收据。\n随时输入 `看看` 回访；同一张通行证换个会话仍能接上。\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 1,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 1}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_c628030f4f814b0baba785cf0423af4b\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "寄存 会打嗝的月亮 | 每周五变成奶酪",
+      "workflow_run_id": "1f50e35e-004c-4529-b6c0-fb5d0da99f08",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n已寄存「会打嗝的月亮」。来历：「每周五变成奶酪」。\n阿纸盖章：本处第一次接待这种麻烦，保管费收你两个不存在的硬币。离谱值 +2。\n\n**柜中清单**\n- 会打嗝的月亮 · 待认领\n离谱值：2\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 2,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 2}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_0256612f75774420ad82a4e86487f182\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "约定 每次见面先说咕叽",
+      "workflow_run_id": "7bb5a42e-acd2-402b-abbf-001114673448",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n我把「每次见面先说咕叽」写进了值班守则。下次你来，我会主动提醒。\n\n**柜中清单**\n- 会打嗝的月亮 · 待认领\n离谱值：2\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 3,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 3}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_c9408831df2144c190f013f5d877b0f8\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "认领 会打嗝的月亮 | 我从没见过它",
+      "workflow_run_id": "43755e3e-c89a-403e-aba9-6847b4939b57",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n驳回：证词没有和原来历对上。小提示：来历是「每周五变成奶酪」。找出至少两个连续字，再来骗……再来认领。\n\n**柜中清单**\n- 会打嗝的月亮 · 待认领\n离谱值：2\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 4,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 4}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_0f0df56a525949d5887f23940db53d68\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "认领 会打嗝的月亮 | 奶酪就是证据",
+      "workflow_run_id": "49d0e38d-b624-4b89-a27f-13234bf63623",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n证词核对通过：「奶酪」与原档案吻合。领回「会打嗝的月亮」，离谱值 +3。\n记忆回声：你当时写的是「每周五变成奶酪」。我可没忘。\n\n**柜中清单**\n- 会打嗝的月亮 · 已领回\n离谱值：5\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 5,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 5}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_16f7eec1a0cd48b7bd1a5c51e83faeeb\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "结案",
+      "workflow_run_id": "35fbdcc1-89e1-4c2c-9edc-da283fb1de24",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n### 🧾 夜班结案收据\n称号：**负一楼常驻编外人员**\n离谱值：5 · 已认领：1/1\n本班展品：会打嗝的月亮\n留给下次的暗号：「会打嗝的月亮」\n仍然有效的约定：「每次见面先说咕叽」\n\n本班已归档，柜子已腾空。下次开门，阿纸会记得你的称号、暗号和约定。\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 6,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 6}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_3e42865a655c47acbb991cf98105f841\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "开门",
+      "workflow_run_id": "7ca23cdf-e8aa-4330-b168-e20f3cece4a1",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n你又来了。别装第一次来，你的档案夹自己跑到柜台上了。\n\n我还记着你的约定：「每次见面先说咕叽」。违约的话，订书机会打嗝。\n\n上次结案你拿到了「负一楼常驻编外人员」，那件「会打嗝的月亮」至今还在员工培训里当反面教材。\n\n**三步玩一局**\n1. `寄存 物品名 | 离谱来历`（最多三件）\n2. `约定 一句约定`，或 `认领 物品名 | 包含来历中至少两个连续字的证词`\n3. `结案`，领取专属收据。\n随时输入 `看看` 回访；同一张通行证换个会话仍能接上。\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 7,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 7}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_e4fabc77f84a4699943e2910a9f58323\"}"
+      },
+      "total_steps": 0
+    },
+    {
+      "input": "开门",
+      "entry": "companion /play -> real Dify",
+      "workflow_run_id": "0c35e64d-5547-40d1-b062-ef35e50fe730",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n你又来了。别装第一次来，你的档案夹自己跑到柜台上了。\n\n我还记着你的约定：「每次见面先说咕叽」。违约的话，订书机会打嗝。\n\n上次结案你拿到了「负一楼常驻编外人员」，那件「会打嗝的月亮」至今还在员工培训里当反面教材。\n\n**三步玩一局**\n1. `寄存 物品名 | 离谱来历`（最多三件）\n2. `约定 一句约定`，或 `认领 物品名 | 包含来历中至少两个连续字的证词`\n3. `结案`，领取专属收据。\n随时输入 `看看` 回访；同一张通行证换个会话仍能接上。\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 8,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 8}, \"entry_id\": \"mem_ent_9a2555bad9874bdc9040f029b1b6c222\", \"entry_version_id\": \"mem_ver_60179b49af5d407ebe2f1337bc07a467\"}"
+      }
+    }
+  ],
+  "node_traces": [
+    {
+      "workflow_run_id": "9bb7bf5b-44c7-4b4b-99d7-a54284f76492",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.030358,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.535233,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.998738,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.242696,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.640895,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.085901,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.069426,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.106808,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.075441,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "1f50e35e-004c-4529-b6c0-fb5d0da99f08",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.029428,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.087841,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.164096,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.062205,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.416976,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.075297,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.043832,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.079351,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.040517,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "7bb5a42e-acd2-402b-abbf-001114673448",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.021641,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.098349,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.238627,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.090824,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.503377,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.059068,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.037982,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.070159,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.036277,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "43755e3e-c89a-403e-aba9-6847b4939b57",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.028444,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.099071,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.157161,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.066883,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.410978,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.067763,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.041135,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.069304,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.039343,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "49d0e38d-b624-4b89-a27f-13234bf63623",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.026395,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.083303,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.144029,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.061791,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.565024,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.09851,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.045111,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.083463,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.042508,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "35fbdcc1-89e1-4c2c-9edc-da283fb1de24",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.023942,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.102745,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.203186,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.073444,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.538963,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.064852,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.03747,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.06927,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.035978,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "7ca23cdf-e8aa-4330-b168-e20f3cece4a1",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.017424,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.061043,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.226319,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.091678,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.613187,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.072723,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.044595,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.077689,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.036041,
+          "error": null
+        }
+      ]
+    },
+    {
+      "workflow_run_id": "0c35e64d-5547-40d1-b062-ef35e50fe730",
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "🎟️ 夜班来访",
+          "status": "succeeded",
+          "elapsed_time": 0.017351,
+          "error": null
+        },
+        {
+          "node_id": "pack",
+          "node_type": "code",
+          "title": "校验通行证与输入",
+          "status": "succeeded",
+          "elapsed_time": 0.074381,
+          "error": null
+        },
+        {
+          "node_id": "load",
+          "node_type": "http-request",
+          "title": "📖 读取 PowerContext 旧档案",
+          "status": "succeeded",
+          "elapsed_time": 0.211037,
+          "error": null
+        },
+        {
+          "node_id": "game",
+          "node_type": "code",
+          "title": "🎭 夜班规则：旧梗影响新回合",
+          "status": "succeeded",
+          "elapsed_time": 0.105056,
+          "error": null
+        },
+        {
+          "node_id": "commit",
+          "node_type": "http-request",
+          "title": "💾 保存玩家选择和新状态",
+          "status": "succeeded",
+          "elapsed_time": 0.536064,
+          "error": null
+        },
+        {
+          "node_id": "confirm",
+          "node_type": "code",
+          "title": "确认保存成功再反馈",
+          "status": "succeeded",
+          "elapsed_time": 0.065657,
+          "error": null
+        },
+        {
+          "node_id": "narrate",
+          "node_type": "http-request",
+          "title": "✨ 可选 AI 旁白（默认规则剧场）",
+          "status": "succeeded",
+          "elapsed_time": 0.040189,
+          "error": null
+        },
+        {
+          "node_id": "render",
+          "node_type": "code",
+          "title": "展示回执与运行模式",
+          "status": "succeeded",
+          "elapsed_time": 0.095594,
+          "error": null
+        },
+        {
+          "node_id": "end",
+          "node_type": "end",
+          "title": "🧾 柜员回执",
+          "status": "succeeded",
+          "elapsed_time": 0.048708,
+          "error": null
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "all_workflow_runs_succeeded",
+    "cross_dify_user_memory_reuse",
+    "real_powercontext_citations_in_outputs",
+    "all_nine_real_nodes_succeeded_each_run",
+    "companion_html_returned_without_service_keys",
+    "companion_web_api_calls_real_dify"
+  ]
+}

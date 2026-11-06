@@ -7,13 +7,15 @@
 | Dify | 官方 `langgenius/dify` tag `1.9.1`，源码 commit `cd47a47c3b4acc4d4457b73777722602c33bc950` |
 | DSL | `0.4.0`，文件 `dsl/strange-cabinet.yml`；Workflow，9 个节点，无插件依赖 |
 | PowerContext | PyPI `powercontext[server]==1.2.0`，自带 HTTP API 与 SQLite 持久层 |
-| 配套服务 | Python 3.13；实际验证为 Windows / CPython 3.13.9 |
+| 配套服务 | Python 3.13.9；Windows 原生与 Linux 容器两种方式 |
 | Web 服务 | FastAPI 0.135.1、uvicorn 0.41.0、httpx 0.28.1 |
 | 模型 | 默认无需；可选 OpenAI 兼容 Chat Completions 模型，不依赖 Embedding / Rerank |
 | 资源 | 配套服务建议 2 GB 内存；完整 Dify 建议至少 8 GB 内存、15 GB 可用磁盘；具体以官方部署要求为准 |
 | 网络 | 初次安装需要 PyPI / GitHub / 镜像仓库；运行时 Dify → 适配器 → PowerContext 必须可达；仅 AI 模式需要模型网络 |
 
-`constraints.txt` 固定本次 Windows 实测的依赖解析版本，Windows 特有依赖带平台标记。Linux 容器配置已交付，尚未完成容器启动验证。不要在赛事仓库根目录运行 `pip install .`：赛事分支不含 PowerContext Python 包。
+`constraints.txt` 固定依赖解析版本，Windows 特有依赖与 `rpds-py` 的平台差异带条件标记。不要在赛事仓库根目录运行 `pip install .`：赛事分支不含 PowerContext Python 包。
+
+**首次体验推荐使用 [独立本地 Dify 环境](LOCAL_DIFY.md)**：一套 Compose 同时启动 Dify 引擎、真实 PowerContext 和作品窗口，脚本完成 DSL 导入、环境绑定与发布。下文保留已有 Dify 环境的手动接入方法。
 
 ## 1. 安装和启动配套服务
 
@@ -53,7 +55,7 @@ cp .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8812 --workers 1
 ```
 
-`/health` 只有能访问真实 PowerContext 时才成功；API 文档在 `/docs`。本地 PowerContext 默认禁用认证，只监听环回地址；容器中的 memory 不发布宿主机端口。
+`/health` 只有能访问真实 PowerContext 时才成功；API 文档在 `/docs`。本地 PowerContext 未配置 token 时仅允许环回地址；设置 `POWERCONTEXT_TOKEN` 后启用真实 Bearer 认证。容器中的 memory 不发布宿主机端口，必须使用认证；Compose 将未填写的记忆 token 回退为 `CABINET_TOKEN`，也可设置独立随机值。
 
 可选容器方式（Docker Compose v2）：
 
@@ -153,4 +155,4 @@ NARRATOR_API_KEY=replace-with-your-key
 - HTTP 提交以 Dify workflow_run_id 幂等，保留最近一次提交的请求 ID；同一个 HTTP 提交紧接着重试不会重复得分。更早的旧请求被版本检查拒绝；不宣称永久去重所有历史请求。点击“重新运行”会产生新的 run ID，应先 `看看` 核对状态。
 - PowerContext 断开时不会编造存档。提交超时可能结果未知，重连后先 `看看`。已成功保存后旁白节点失败会返回原规则回执。
 - Dify 自身可能记录输入及通行证，只在受控评测环境使用，分享执行截图前遮盖通行证与凭据。
-- 当前机器 D 盘满导致 WSL 无法启动，真实 Dify 导入和容器启动尚未实测；该限制影响提交完成度，详见 evidence/README.md。
+- 默认规则模式已实测；可选 AI 润色、Dify `studio` 网页 profile 和浏览器渲染未作为本次验收项。完整 API、作品网页后端及容器重启证据见 [evidence/README.md](../evidence/README.md)。

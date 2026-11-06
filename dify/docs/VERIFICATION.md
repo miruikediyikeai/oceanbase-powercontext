@@ -65,14 +65,16 @@ Content-Type: application/json
 
 脚本自动选择空闲端口，在指定目录创建一套隔离的真实 PowerContext 数据，执行十轮、重启两个进程、核对完全一致的状态与 citation，检查直接 PowerContext API 读回值及故障行为。仅终止自己启动的进程，不占用或删除你的游戏数据。默认不连接 Dify；它不能证明 DSL 已成功导入。
 
-真实已发布 Dify 的七轮精简验收：
+真实已发布 Dify 的七轮精简验收，并通过配套网页后端回访一次：
 
 ```powershell
 # .env 中配置 DIFY_API_URL 和 DIFY_APP_KEY
-.\.venv\Scripts\python.exe scripts/verify_dify.py --output .runtime/dify-verification.json
+.\.venv\Scripts\python.exe scripts/verify_dify.py --console-traces --web-url http://127.0.0.1:8812 --output .runtime/dify-verification.json
 ```
 
-脚本通过真实 `/v1/workflows/run` 调用，检查所有运行 succeeded、业务反馈与 citation，并以不同的 Dify API `user` 验证相同通行证的跨用户上下文复用。只会在全部成功后写出 passed 证据，无法连接或节点失败就退出失败，不会伪造执行记录。
+脚本通过真实 `/v1/workflows/run` 调用，检查所有运行 succeeded、业务反馈与 citation，并以不同的 Dify API `user` 验证相同通行证的跨用户上下文复用。`--console-traces` 需 `.env` 的本地管理员与应用 ID，逐轮核对九个实际节点；只导出 ID / 类型 / 状态 / 耗时，排除原始请求头、输入与 process_data。没有管理员配置时可省略该参数。只会在全部成功后写出 passed 证据，无法连接或节点失败就退出失败。
+
+对本作品独立 Compose 栈，进一步运行 `python scripts/verify_deployed_restart.py`，可实际重启 `memory` 和 `adapter` 两个容器，检查记忆完全一致，并用新的 Dify API 用户回访。该脚本另执行 4 次真实 Dify 回合，不删除任何卷。Windows 调用 WSL 内 Docker 时加 `--wsl-distro Ubuntu-22.04`。完整启动与记录命令见 [LOCAL_DIFY.md](LOCAL_DIFY.md)。
 
 ## 恢复初始状态
 
@@ -80,4 +82,4 @@ Content-Type: application/json
 
 ## 当前实际结果
 
-实际的十轮输出、PowerContext 版本引用、重启前后快照和 API 直接读回见 `evidence/powercontext-verification.json`。规则及模型失败契约测试结果见 `evidence/tests.txt`。真实 Dify 引擎验收尚未完成，不能将上述材料当作 Dify 导入成功证据，原因见 `evidence/README.md`。
+真实 Dify 的重新导入、发布报告见 `evidence/dify-import.json`；8 轮输出与全部 72 条成功节点记录见 `evidence/dify-verification.json`。容器重启的另 4 轮、完整记忆快照和 PowerContext 原始 API 读回见 `evidence/deployed-restart.json`。部署镜像 / 运行版本见 `evidence/deployment.json`。独立原生十轮验证仍保留于 `evidence/powercontext-verification.json`，该文件明确不冒充 Dify 引擎执行。12 项测试见 `evidence/tests.txt`。

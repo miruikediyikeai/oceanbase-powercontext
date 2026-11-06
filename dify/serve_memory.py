@@ -1,5 +1,6 @@
 """Run a real PowerContext 1.2.0 instance; no application-side memory database."""
 import argparse
+import os
 from pathlib import Path
 
 import uvicorn
@@ -20,11 +21,12 @@ def main():
     args = parser.parse_args()
     directory = args.data.resolve()
     directory.mkdir(parents=True, exist_ok=True)
+    token = os.getenv("POWERCONTEXT_TOKEN", "")
     settings = ServerSettings(
         workspace=directory,
         database=SQLiteConfig(url=f"sqlite+aiosqlite:///{(directory / 'memory.db').as_posix()}"),
         http=HttpConfig(host=args.host, port=args.port),
-        auth=BearerAuthConfig(enabled=False),
+        auth=BearerAuthConfig(enabled=bool(token), token=token or None),
         access=AccessControlConfig(mode="disabled"),
         inference=InferenceConfig(),
         runtime=RuntimeConfig(schedule_seconds=None, experience_schedule_seconds=None),

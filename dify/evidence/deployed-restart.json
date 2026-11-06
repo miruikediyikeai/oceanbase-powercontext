@@ -1,0 +1,135 @@
+{
+  "status": "passed",
+  "executed_at": "2026-11-06T12:39:45.616290+00:00",
+  "execution": "actual Dify API + restart of deployed PowerContext/adapter containers",
+  "before_restart": {
+    "state": {
+      "schema": 1,
+      "turn": 0,
+      "score": 0,
+      "items": [],
+      "vow": "每次见面先说咕叽",
+      "album": [
+        {
+          "title": "负一楼常驻编外人员",
+          "souvenir": "会打嗝的月亮"
+        }
+      ],
+      "visits": 0
+    },
+    "version": 3,
+    "scope_id": "scp_34n3zva94hmrvbmdchnn5qmt6d",
+    "citation": {
+      "memory_ref": {
+        "family": "memory",
+        "artifact_id": "memory",
+        "revision": 3
+      },
+      "entry_id": "mem_ent_a10c05a91b514b0ca765c7e82df90aa2",
+      "entry_version_id": "mem_ver_273f22df401a456e9aca71635b4b8a11"
+    }
+  },
+  "after_restart": {
+    "state": {
+      "schema": 1,
+      "turn": 0,
+      "score": 0,
+      "items": [],
+      "vow": "每次见面先说咕叽",
+      "album": [
+        {
+          "title": "负一楼常驻编外人员",
+          "souvenir": "会打嗝的月亮"
+        }
+      ],
+      "visits": 0
+    },
+    "version": 3,
+    "scope_id": "scp_34n3zva94hmrvbmdchnn5qmt6d",
+    "citation": {
+      "memory_ref": {
+        "family": "memory",
+        "artifact_id": "memory",
+        "revision": 3
+      },
+      "entry_id": "mem_ent_a10c05a91b514b0ca765c7e82df90aa2",
+      "entry_version_id": "mem_ver_273f22df401a456e9aca71635b4b8a11"
+    }
+  },
+  "powercontext_direct_readback": {
+    "memory": {
+      "family": "memory",
+      "artifact_id": "memory",
+      "revision": 3
+    },
+    "entries": [
+      {
+        "citation": {
+          "memory_ref": {
+            "family": "memory",
+            "artifact_id": "memory",
+            "revision": 3
+          },
+          "entry_id": "mem_ent_a10c05a91b514b0ca765c7e82df90aa2",
+          "entry_version_id": "mem_ver_273f22df401a456e9aca71635b4b8a11"
+        },
+        "version": 3,
+        "kind": "cabinet_state",
+        "text": "{\"state\":{\"schema\":1,\"turn\":0,\"score\":0,\"items\":[],\"vow\":\"每次见面先说咕叽\",\"album\":[{\"title\":\"负一楼常驻编外人员\",\"souvenir\":\"会打嗝的月亮\"}],\"visits\":0},\"version\":3,\"request_id\":\"9eebea6c-7398-4b6e-8d5a-f8beb35e0323\",\"result\":\"🗃️ 怪奇失物招领处 · 夜班柜员阿纸\\n\\n### 🧾 夜班结案收据\\n称号：**负一楼常驻编外人员**\\n离谱值：2 · 已认领：0/1\\n本班展品：会打嗝的月亮\\n留给下次的暗号：「会打嗝的月亮」\\n仍然有效的约定：「每次见面先说咕叽」\\n\\n本班已归档，柜子已腾空。下次开门，阿纸会记得你的称号、暗号和约定。\"}",
+        "state": "active",
+        "source_refs": [],
+        "artifact_refs": []
+      }
+    ]
+  },
+  "rounds": [
+    {
+      "input": "寄存 会打嗝的月亮 | 每周五变成奶酪",
+      "workflow_run_id": "e12f828f-d3ff-4e87-b252-58beef9af218",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n已寄存「会打嗝的月亮」。来历：「每周五变成奶酪」。\n阿纸盖章：本处第一次接待这种麻烦，保管费收你两个不存在的硬币。离谱值 +2。\n\n**柜中清单**\n- 会打嗝的月亮 · 待认领\n离谱值：2\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 1,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 1}, \"entry_id\": \"mem_ent_a10c05a91b514b0ca765c7e82df90aa2\", \"entry_version_id\": \"mem_ver_b29979eee38746b2b36aef0c419de441\"}"
+      }
+    },
+    {
+      "input": "约定 每次见面先说咕叽",
+      "workflow_run_id": "8375422e-724a-4ed6-8f24-f0a4e421029e",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n我把「每次见面先说咕叽」写进了值班守则。下次你来，我会主动提醒。\n\n**柜中清单**\n- 会打嗝的月亮 · 待认领\n离谱值：2\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 2,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 2}, \"entry_id\": \"mem_ent_a10c05a91b514b0ca765c7e82df90aa2\", \"entry_version_id\": \"mem_ver_0de33900c9054a1ca5a56d660f1ab030\"}"
+      }
+    },
+    {
+      "input": "结案",
+      "workflow_run_id": "9eebea6c-7398-4b6e-8d5a-f8beb35e0323",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n### 🧾 夜班结案收据\n称号：**负一楼常驻编外人员**\n离谱值：2 · 已认领：0/1\n本班展品：会打嗝的月亮\n留给下次的暗号：「会打嗝的月亮」\n仍然有效的约定：「每次见面先说咕叽」\n\n本班已归档，柜子已腾空。下次开门，阿纸会记得你的称号、暗号和约定。\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 3,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 3}, \"entry_id\": \"mem_ent_a10c05a91b514b0ca765c7e82df90aa2\", \"entry_version_id\": \"mem_ver_273f22df401a456e9aca71635b4b8a11\"}"
+      }
+    },
+    {
+      "input": "开门",
+      "workflow_run_id": "acc1409e-125e-46b4-aacb-0a58828a37b3",
+      "status": "succeeded",
+      "outputs": {
+        "text": "🗃️ 怪奇失物招领处 · 夜班柜员阿纸\n\n欢迎来到不存在的负一楼。这里寄存的不是东西，是东西惹出来的麻烦。\n\n我还记着你的约定：「每次见面先说咕叽」。违约的话，订书机会打嗝。\n\n上次结案你拿到了「负一楼常驻编外人员」，那件「会打嗝的月亮」至今还在员工培训里当反面教材。\n\n**三步玩一局**\n1. `寄存 物品名 | 离谱来历`（最多三件）\n2. `约定 一句约定`，或 `认领 物品名 | 包含来历中至少两个连续字的证词`\n3. `结案`，领取专属收据。\n随时输入 `看看` 回访；同一张通行证换个会话仍能接上。\n\n---\n🎭 规则剧场 · 本回合未调用生成模型",
+        "memory_version": 4,
+        "memory_citation": "{\"memory_ref\": {\"family\": \"memory\", \"artifact_id\": \"memory\", \"revision\": 4}, \"entry_id\": \"mem_ent_a10c05a91b514b0ca765c7e82df90aa2\", \"entry_version_id\": \"mem_ver_dad26ba90e0a4cf58c8b34375ef36fca\"}"
+      }
+    }
+  ],
+  "checks": [
+    "empty_initial_scope",
+    "three_real_dify_turns_saved_memory",
+    "both_containers_restarted",
+    "identical_state_version_scope_citation",
+    "direct_powercontext_api_matches_saved_state",
+    "new_dify_user_reuses_old_vow_and_souvenir_after_restart"
+  ]
+}
