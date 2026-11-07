@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-11-07T13:30:01.309Z",
+  "sql": [
+    {
+      "version": "5.7.25-OceanBase seekdb-v1.4.0.0",
+      "sqlCheck": 2,
+      "serverTime": "2026-11-07T13:29:57.000Z"
+    }
+  ],
+  "ddl": [
+    [
+      {
+        "Table": "c$v2$f20cf8a6daac11f19a6400155d153ba9",
+        "Create Table": "CREATE TABLE `c$v2$f20cf8a6daac11f19a6400155d153ba9` (\n  `_id` varbinary(512) NOT NULL,\n  `document` string DEFAULT NULL,\n  `embedding` VECTOR(512) DEFAULT NULL,\n  `metadata` json DEFAULT NULL,\n  PRIMARY KEY (`_id`),\n  FULLTEXT KEY `idx_fts` (`document`) WITH PARSER ik PARSER_PROPERTIES=(ik_mode=\"smart\") BLOCK_SIZE 16384,\n  VECTOR KEY `idx_vec` (`embedding`) WITH (DISTANCE=COSINE, TYPE=HNSW, LIB=VSAG, M=16, EF_CONSTRUCTION=200, EF_SEARCH=64, SYNC_MODE=ASYNC) BLOCK_SIZE 16384\n) ORGANIZATION HEAP DEFAULT CHARSET = utf8mb4 ROW_FORMAT = DYNAMIC COMPRESSION = 'zstd_1.3.8' BLOCK_SIZE = 16384 TABLET_SIZE = 134217728 PCTFREE = 0 LOB_INROW_THRESHOLD=78643"
+      }
+    ],
+    [
+      {
+        "Table": "kb_catalog",
+        "Create Table": "CREATE TABLE `kb_catalog` (\n  `name` varchar(64) NOT NULL,\n  `model_key` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`name`)\n) ORGANIZATION INDEX DEFAULT CHARSET = utf8mb4 ROW_FORMAT = DYNAMIC COMPRESSION = 'zstd_1.3.8' BLOCK_SIZE = 16384 TABLET_SIZE = 134217728 PCTFREE = 0"
+      }
+    ]
+  ],
+  "parameters": {
+    "memory_limit": [
+      {
+        "name": "memory_limit",
+        "value": "3G"
+      }
+    ],
+    "cpu_count": [
+      {
+        "name": "cpu_count",
+        "value": "0"
+      }
+    ],
+    "datafile_size": [
+      {
+        "name": "datafile_size",
+        "value": "2G"
+      }
+    ],
+    "datafile_maxsize": [
+      {
+        "name": "datafile_maxsize",
+        "value": "5G"
+      }
+    ],
+    "log_disk_size": [
+      {
+        "name": "log_disk_size",
+        "value": "3G"
+      }
+    ]
+  },
+  "collectionCount": 19,
+  "telemetry": "No telemetry file supplied; no ID has been fabricated."
+}

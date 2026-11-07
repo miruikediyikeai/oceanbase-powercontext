@@ -1,0 +1,23 @@
+services:
+  seekdb:
+    image: oceanbase/seekdb:1.4.0-100000172026082615@sha256:4db4961869d554313520d6081fca29265ba6da6db7313311bd8acbed771a956b
+    ports: ["127.0.0.1:2881:2881"]
+    environment:
+      SEEKDB_DATABASE: stepfun
+      ROOT_PASSWORD: ${SEEKDB_PASSWORD:-}
+      MYSQL_PWD: ${SEEKDB_PASSWORD:-}
+      MEMORY_LIMIT: 3G
+      DATAFILE_SIZE: 2G
+      DATAFILE_MAXSIZE: 5G
+      LOG_DISK_SIZE: 3G
+      CPU_COUNT: "0"
+    volumes: ["seekdb-data:/var/lib/seekdb"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --no-defaults --host=127.0.0.1 --port=2881 --user=root --database=stepfun --execute='SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      start_period: 90s
+      retries: 60
+    restart: unless-stopped
+volumes:
+  seekdb-data:

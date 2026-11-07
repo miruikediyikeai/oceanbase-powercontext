@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+public/models/
+.runtime/
+test-results/
+__pycache__/

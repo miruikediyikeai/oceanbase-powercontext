@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#182723"><title>LocalSeek · 本地知识库</title></head>
+<body><div id="app">
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-mark">L<span>↗</span></span><span>LocalSeek<small>你的端侧知识库</small></span></a>
+    <div class="sidebar-label">工作空间 <span>01</span></div>
+    <nav><button class="nav-item active">▦ <span>知识库</span><span class="nav-arrow">↗</span></button><a class="nav-item" href="#activity">◷ <span>运行记录</span></a></nav>
+    <div class="collection-panel"><label for="collection">当前知识库</label><select id="collection" aria-label="当前知识库"></select><button id="create" class="text-button">＋ 新建知识库</button></div>
+    <div class="privacy-card"><span class="privacy-icon">◎</span><strong>计算，留在你的设备。</strong><p>文档与查询在浏览器中向量化，<br>由本地 seekdb 保存并检索。</p><div><i></i> 无云端推理 API</div></div>
+    <div class="sidebar-footer"><span class="avatar">LS</span><div>个人工作空间<small>seekdb × 阶跃星辰</small></div><span>⌘</span></div>
+  </aside>
+  <main>
+    <header class="topbar"><div>工作空间 <span>/</span> 知识库</div><a href="https://github.com/miruikediyikeai/oceanbase-powercontext/tree/2026-competition-ecosystem/stepfun" target="_blank" rel="noreferrer">项目文档 ↗</a></header>
+    <div class="main-content">
+      <div class="page-heading"><div><div class="eyebrow">LOCAL INTELLIGENCE, CONNECTED KNOWLEDGE</div><h1>让知识，触手可及<span>。</span></h1><p>从你的文档出发，在本地发现更有意义的答案。</p></div><span class="workspace-badge">✳ 个人知识库</span></div>
+      <section class="status-strip"><div><span class="dot" id="db-dot"></span><span id="db-status">正在连接 seekdb</span></div><div>推理后端 <b id="backend">尚未加载</b></div><div>模型 <b>BGE-small-zh · <span id="precision-label">INT8</span></b></div><div>片段 <b id="count">0</b></div></section>
+      <div class="workspace-grid">
+        <section class="card import-card"><div class="card-title"><span class="step">01</span><h2>导入知识</h2><span class="subtle">IMPORT</span></div><p class="description">添加文本文档，构建你的知识空间。</p>
+          <label class="dropzone" id="dropzone"><input id="files" type="file" multiple accept=".txt,.md,.text,.csv,.json" hidden><span class="upload-icon">↥</span><strong>拖入文件，或<span>点击选择</span></strong><small>TXT / Markdown / 纯文本 · 单次最多 50 个文件</small></label>
+          <div class="divider"><span>或直接粘贴文本</span></div><input id="doc-title" placeholder="文档名称（可选）" aria-label="文档名称"><textarea id="doc-text" rows="5" placeholder="在这里放入值得记住的内容…" aria-label="文档内容"></textarea>
+          <div class="import-actions"><button id="sample" class="text-button">↗ 载入示例语料</button><span id="file-summary">尚未选择文件</span></div>
+          <details class="settings"><summary>推理设置 <span>⌄</span></summary><div><label>模型精度<select id="dtype"><option value="auto">自动 · GPU FP16 / WASM INT8</option><option value="q8">INT8</option><option value="fp32">FP32 · 对照基线</option><option value="fp16">FP16</option></select></label><label>批大小<select id="batch"><option>1</option><option>4</option><option selected>8</option><option>16</option></select></label></div><label class="checkbox"><input id="force-wasm" type="checkbox"> 强制 WASM（验证降级）</label><p>设置在模型加载前生效，修改后请刷新页面。</p></details>
+          <button id="import" class="button primary full">向量化并导入 <span>↗</span></button><div class="progress-track"><div id="progress-bar"></div></div><div id="progress-label" class="hint" role="status">就绪 · 向量仅在本机浏览器中生成</div>
+        </section>
+        <section class="card search-card"><div class="card-title"><span class="step">02</span><h2>探索知识</h2><span class="subtle">SEARCH</span></div><p class="description">用自然语言提问，找到相关原文。</p><form id="search-form"><div class="search-input"><span>⌕</span><input id="query" placeholder="例如：浏览器不支持 WebGPU 时怎么办？" required maxlength="500" aria-label="检索问题"><button class="button primary" id="search" type="submit">检索 ↗</button></div><div class="search-options"><label><select id="mode"><option value="hybrid">混合检索 · 语义 + 全文</option><option value="vector">语义检索</option></select></label><label>返回 <select id="topk"><option>3</option><option selected>5</option><option>10</option></select> 条</label></div></form>
+          <div id="results-info" class="results-info">检索结果</div><div id="results"><div class="empty-state"><div class="empty-graphic"><span>≡</span><span>⌕</span></div><h3>每个好问题，都有迹可循</h3><p>导入一份文档，试着问出第一个问题。<br>相关内容和来源会出现在这里。</p><button id="example-query" class="query-chip">试试：怎样在浏览器中保护文档隐私？ ↗</button></div></div>
+          <div class="search-footer"><span>◈ seekdb 数据库内融合排序</span><span>原文可追溯</span></div>
+        </section>
+      </div>
+      <section class="activity" id="activity"><div><h2>运行记录 <span>LIVE</span></h2><p>每一步的耗时，都清晰可见。</p></div><div class="activity-actions"><button id="load" class="button secondary">加载模型</button><button id="export" class="button secondary">导出日志 ↓</button></div><div id="metrics" class="metric-grid"><div>模型加载<b>—<small> ms</small></b></div><div>文档向量化<b>—<small> ms</small></b></div><div>写入 / 索引刷新<b>—<small> ms</small></b></div><div>端到端检索<b>—<small> ms</small></b></div></div><pre id="log" aria-live="polite">等待开始。模型仅加载一次，后续查询复用已加载的模型。</pre></section>
+      <footer class="page-footer"><span>LocalSeek / 为本地知识而构建</span><span>Browser embedding → seekdb → Your knowledge</span></footer>
+    </div>
+  </main>
+</div><div id="toast" role="alert" hidden></div><script type="module" src="/src/main.js"></script></body></html>

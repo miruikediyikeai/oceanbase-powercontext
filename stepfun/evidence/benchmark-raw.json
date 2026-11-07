@@ -1,0 +1,5665 @@
+{
+  "at": "2026-11-07T13:24:05.389Z",
+  "runs": 3,
+  "collectionName": "kb_benchmark_1794057845389",
+  "datasetDocuments": 24,
+  "queries": 16,
+  "configs": [
+    {
+      "config": {
+        "name": "FP32 WASM baseline",
+        "dtype": "fp32",
+        "forceWasm": true,
+        "batchSize": 1,
+        "refreshEveryBatch": true
+      },
+      "load": {
+        "backend": "wasm",
+        "precision": "fp32",
+        "loadMs": 3195.60000000149,
+        "fallbackReason": "已强制 WASM（降级验证）",
+        "cached": false,
+        "modelFetchWallMs": 989.2000000029802,
+        "modelResources": [
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer.json",
+            "durationMs": 14.600000001490116,
+            "transferBytes": 439425,
+            "decodedBytes": 439125,
+            "startTime": 289.19999999552965,
+            "responseEnd": 303.79999999701977
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer_config.json",
+            "durationMs": 9.700000002980232,
+            "transferBytes": 667,
+            "decodedBytes": 367,
+            "startTime": 289.59999999403954,
+            "responseEnd": 299.29999999701977
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/config.json",
+            "durationMs": 11.399999998509884,
+            "transferBytes": 1016,
+            "decodedBytes": 716,
+            "startTime": 289.79999999701977,
+            "responseEnd": 301.19999999552965
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/onnx/model.onnx",
+            "durationMs": 944.5,
+            "transferBytes": 94852177,
+            "decodedBytes": 94851877,
+            "startTime": 333.8999999985099,
+            "responseEnd": 1278.3999999985099
+          }
+        ]
+      },
+      "hardware": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+        "concurrency": 16,
+        "deviceMemory": 16,
+        "gpu": null
+      },
+      "firstInferenceMs": 527.7999999970198,
+      "coldQuery": {
+        "searchMs": 85.33450000001176,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "beb68736fec964eca2ddf9ec52492eaab0bdc3dd81c26347e52521cfdb997d23",
+            "text": "端侧推理让文档和查询的向量计算发生在用户自己的浏览器。应用不调用云端推理 API。模型文件可以先下载并缓存，本地计算不依赖网络推理服务。原文和向量会通过本机接口写入本地 seekdb，因此浏览器本地计算不等于文档永远不离开浏览器；需要正确配置数据库的访问权限。",
+            "metadata": {
+              "chunk": 0,
+              "source": "浏览器隐私保护.md",
+              "documentId": "privacy",
+              "importedAt": "2026-11-07T13:24:58.830Z"
+            },
+            "score": 0.032
+          },
+          {
+            "id": "d0be4edbbfed645697de3c23c1b5751fa0c4ea39f232222611993ea9d8c03c39",
+            "text": "每个知识库对应 seekdb 的独立集合，目录信息同样保存在 seekdb 中。浏览器仅在 localStorage 保存当前集合名称，不保存可替代检索的向量库。切换知识库时清空旧查询结果，所有写入和搜索请求都携带明确的集合名称。重启服务后集合目录能够恢复。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库会话管理.md",
+              "documentId": "collections",
+              "importedAt": "2026-11-07T13:24:58.830Z"
+            },
+            "score": 0.0308
+          },
+          {
+            "id": "8cbfba3459944d355621174904174c882cc8d6e0d71b7cd9726f93956bea81f8",
+            "text": "中文全文检索需要分词器。seekdb 支持 ik 分词，在本应用中选择 smart 模式。全文匹配利用倒排索引返回关键词相关文档，和语义向量路共同进入数据库混合检索。中文专有名词和英文技术术语可通过全文通道补充。",
+            "metadata": {
+              "chunk": 0,
+              "source": "中文全文索引.md",
+              "documentId": "fulltext",
+              "importedAt": "2026-11-07T13:24:58.830Z"
+            },
+            "score": 0.0303
+          },
+          {
+            "id": "af16ab16ef0b47c2c288814050597e7423f9272c3fbe5bdded641d7d7ca6be65",
+            "text": "数据库文件应存放在持久化数据目录，容器部署需要挂载持久卷。备份前应按照 seekdb 运维要求确保一致性。模型文件可以重新下载，但用户文档与向量需要独立备份。删除浏览器缓存不会删除 seekdb 中的知识库数据。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库备份.md",
+              "documentId": "backup",
+              "importedAt": "2026-11-07T13:24:58.830Z"
+            },
+            "score": 0.0303
+          },
+          {
+            "id": "5508d444cd33c532a9b5e7e1cc005de6d22dfdb65e8eeea84674dd84aa5ef56f",
+            "text": "文档与片段使用稳定 ID，基于文档标识、片段序号和内容的 SHA-256 摘要。重复导入相同文件时使用 upsert，避免重复记录。新增文件产生新 ID 并增量写入。修改文档内容视为新版本，旧版本不会自动删除。连续导入时应保持当前知识库绑定，避免异步任务写入其他集合。",
+            "metadata": {
+              "chunk": 0,
+              "source": "增量导入与去重.md",
+              "documentId": "idempotency",
+              "importedAt": "2026-11-07T13:24:58.830Z"
+            },
+            "score": 0.0301
+          }
+        ],
+        "queryEmbedMs": 80.10000000149012,
+        "e2eMs": 186.80000000447035
+      },
+      "imports": [
+        {
+          "chunks": 24,
+          "embedMs": 6954.79999999702,
+          "writeMs": 511.28899999999703,
+          "refreshMs": 16230.606399999982,
+          "totalMs": 24845.10000000149,
+          "throughput": 3.450854086387859
+        },
+        {
+          "chunks": 24,
+          "embedMs": 6466.800000011921,
+          "writeMs": 406.93959999998333,
+          "refreshMs": 14686.173999999955,
+          "totalMs": 22507.10000000149,
+          "throughput": 3.711263685277998
+        },
+        {
+          "chunks": 24,
+          "embedMs": 5571.999999985099,
+          "writeMs": 317.79490000000806,
+          "refreshMs": 15173.53129999993,
+          "totalMs": 22022,
+          "throughput": 4.307250538417836
+        }
+      ],
+      "queries": [
+        {
+          "repetition": 0,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.70000000298023,
+          "searchMs": 52.173399999999674,
+          "e2eMs": 130.09999999403954,
+          "displayMs": 130.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 71.70000000298023,
+          "searchMs": 53.817599999994854,
+          "e2eMs": 141.40000000596046,
+          "displayMs": 141.80000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 82,
+          "searchMs": 53.57180000000517,
+          "e2eMs": 156,
+          "displayMs": 156.5
+        },
+        {
+          "repetition": 0,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 92.10000000149012,
+          "searchMs": 55.21349999999802,
+          "e2eMs": 169,
+          "displayMs": 169.29999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 93.69999999552965,
+          "searchMs": 51.43889999999374,
+          "e2eMs": 165.30000000447035,
+          "displayMs": 165.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 88.39999999850988,
+          "searchMs": 49.08280000000377,
+          "e2eMs": 157.70000000298023,
+          "displayMs": 158.30000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "offline",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 75.29999999701977,
+          "searchMs": 47.64290000000619,
+          "e2eMs": 139.69999999552965,
+          "displayMs": 140.09999999403954
+        },
+        {
+          "repetition": 0,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 71.5,
+          "searchMs": 46.67859999999928,
+          "e2eMs": 133.70000000298023,
+          "displayMs": 134
+        },
+        {
+          "repetition": 0,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "idempotency"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 73.30000000447035,
+          "searchMs": 46.733600000006845,
+          "e2eMs": 137.80000000447035,
+          "displayMs": 138.40000000596046
+        },
+        {
+          "repetition": 0,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "offline",
+            "version",
+            "worker",
+            "collections"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 90.70000000298023,
+          "searchMs": 47.24849999998696,
+          "e2eMs": 157.39999999850988,
+          "displayMs": 157.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 74.80000000447035,
+          "searchMs": 49.53759999998147,
+          "e2eMs": 142.39999999850988,
+          "displayMs": 142.69999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "chunking"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 87.5,
+          "searchMs": 50.56940000000759,
+          "e2eMs": 158.70000000298023,
+          "displayMs": 159.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "hnsw"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 59.20000000298023,
+          "searchMs": 50.870799999975134,
+          "e2eMs": 127.19999999552965,
+          "displayMs": 127.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "version",
+            "metrics"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 88.5,
+          "searchMs": 52.554999999993015,
+          "e2eMs": 164.19999999552965,
+          "displayMs": 164.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "chunking",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 73.79999999701977,
+          "searchMs": 52.63330000001588,
+          "e2eMs": 152.70000000298023,
+          "displayMs": 153.5
+        },
+        {
+          "repetition": 0,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "quantization"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 105.90000000596046,
+          "searchMs": 49.65780000001541,
+          "e2eMs": 172.90000000596046,
+          "displayMs": 173.30000000447035
+        },
+        {
+          "repetition": 1,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 79.5,
+          "searchMs": 48.93080000000191,
+          "e2eMs": 147.19999999552965,
+          "displayMs": 147.39999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 77.80000000447035,
+          "searchMs": 46.68630000000121,
+          "e2eMs": 144.89999999850988,
+          "displayMs": 145.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 82.39999999850988,
+          "searchMs": 46.45010000001639,
+          "e2eMs": 145.09999999403954,
+          "displayMs": 145.69999999552965
+        },
+        {
+          "repetition": 1,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 93.20000000298023,
+          "searchMs": 46.712100000004284,
+          "e2eMs": 163.89999999850988,
+          "displayMs": 164.20000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 92.70000000298023,
+          "searchMs": 50.16959999999381,
+          "e2eMs": 161.59999999403954,
+          "displayMs": 162.09999999403954
+        },
+        {
+          "repetition": 1,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 90.10000000149012,
+          "searchMs": 47.639100000000326,
+          "e2eMs": 158.40000000596046,
+          "displayMs": 159.30000000447035
+        },
+        {
+          "repetition": 1,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "offline",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 92.5,
+          "searchMs": 49.52820000000065,
+          "e2eMs": 164.69999999552965,
+          "displayMs": 165.19999999552965
+        },
+        {
+          "repetition": 1,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 83,
+          "searchMs": 51.258800000010524,
+          "e2eMs": 162.80000000447035,
+          "displayMs": 163.5
+        },
+        {
+          "repetition": 1,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "idempotency"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 101.89999999850988,
+          "searchMs": 50.80119999998715,
+          "e2eMs": 178.30000000447035,
+          "displayMs": 179.20000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "offline",
+            "version",
+            "worker",
+            "collections"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 88.30000000447035,
+          "searchMs": 43.94000000000233,
+          "e2eMs": 149,
+          "displayMs": 149.5
+        },
+        {
+          "repetition": 1,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 68.5,
+          "searchMs": 45.87010000000009,
+          "e2eMs": 131.89999999850988,
+          "displayMs": 132.5
+        },
+        {
+          "repetition": 1,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "chunking"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 87.39999999850988,
+          "searchMs": 53.14489999998477,
+          "e2eMs": 159.79999999701977,
+          "displayMs": 160.29999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "hnsw"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64,
+          "searchMs": 49.866199999989476,
+          "e2eMs": 133,
+          "displayMs": 134.19999999552965
+        },
+        {
+          "repetition": 1,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "version",
+            "metrics"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 99.30000000447035,
+          "searchMs": 51.07119999997667,
+          "e2eMs": 168.70000000298023,
+          "displayMs": 169.30000000447035
+        },
+        {
+          "repetition": 1,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "chunking",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 107.39999999850988,
+          "searchMs": 54.3466999999946,
+          "e2eMs": 184.80000000447035,
+          "displayMs": 185.10000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "quantization"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 84.39999999850988,
+          "searchMs": 50.50559999997495,
+          "e2eMs": 156.5,
+          "displayMs": 157.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 97.70000000298023,
+          "searchMs": 52.11480000001029,
+          "e2eMs": 178,
+          "displayMs": 178.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 84.30000000447035,
+          "searchMs": 49.3411999999953,
+          "e2eMs": 155,
+          "displayMs": 155.5
+        },
+        {
+          "repetition": 2,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 83.60000000149012,
+          "searchMs": 51.58209999999963,
+          "e2eMs": 152.10000000149012,
+          "displayMs": 152.39999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 91.5,
+          "searchMs": 43.7844000000041,
+          "e2eMs": 153.60000000149012,
+          "displayMs": 153.79999999701977
+        },
+        {
+          "repetition": 2,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 77.29999999701977,
+          "searchMs": 51.87050000001909,
+          "e2eMs": 151.20000000298023,
+          "displayMs": 151.80000000447035
+        },
+        {
+          "repetition": 2,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 88.70000000298023,
+          "searchMs": 51.562999999994645,
+          "e2eMs": 162.29999999701977,
+          "displayMs": 163.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "offline",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 76.79999999701977,
+          "searchMs": 49.63719999999739,
+          "e2eMs": 146.89999999850988,
+          "displayMs": 147.70000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 87.70000000298023,
+          "searchMs": 45.3636000000115,
+          "e2eMs": 150,
+          "displayMs": 150.29999999701977
+        },
+        {
+          "repetition": 2,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "idempotency"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 77.70000000298023,
+          "searchMs": 48.22419999999693,
+          "e2eMs": 145.20000000298023,
+          "displayMs": 146.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "offline",
+            "version",
+            "worker",
+            "collections"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 83.5,
+          "searchMs": 50.470000000001164,
+          "e2eMs": 155.60000000149012,
+          "displayMs": 156.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 101,
+          "searchMs": 50.28719999999157,
+          "e2eMs": 179.70000000298023,
+          "displayMs": 180.20000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "chunking"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 93.29999999701977,
+          "searchMs": 50.3642000000109,
+          "e2eMs": 164.10000000149012,
+          "displayMs": 164.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "hnsw"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 84.60000000149012,
+          "searchMs": 49.9318000000203,
+          "e2eMs": 156.20000000298023,
+          "displayMs": 156.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "version",
+            "metrics"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 85.59999999403954,
+          "searchMs": 53.62380000000121,
+          "e2eMs": 160.29999999701977,
+          "displayMs": 160.79999999701977
+        },
+        {
+          "repetition": 2,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "chunking",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 97.69999999552965,
+          "searchMs": 49.50460000001476,
+          "e2eMs": 165.5,
+          "displayMs": 165.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "quantization"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 130.80000000447035,
+          "searchMs": 50.93080000000191,
+          "e2eMs": 209.5,
+          "displayMs": 209.89999999850988
+        }
+      ],
+      "browserVersion": "157.0.4341.42",
+      "externalRequests": [],
+      "browserErrors": [],
+      "summary": {
+        "throughput": 3.711263685277998,
+        "importTotalMs": 22507.10000000149,
+        "embedMs": 6466.800000011921,
+        "writeMs": 406.93959999998333,
+        "refreshMs": 15173.53129999993,
+        "queryEmbedMs": 86.49999999627471,
+        "searchMs": 50.22839999999269,
+        "e2eMs": 156.35000000149012,
+        "displayMs": 156.85000000149012,
+        "recall5": 0.9375,
+        "ndcg5": 0.8761114100503749
+      }
+    },
+    {
+      "config": {
+        "name": "INT8 WASM unoptimized",
+        "dtype": "q8",
+        "forceWasm": true,
+        "batchSize": 1,
+        "refreshEveryBatch": true
+      },
+      "load": {
+        "backend": "wasm",
+        "precision": "q8",
+        "loadMs": 1654.2000000029802,
+        "fallbackReason": "已强制 WASM（降级验证）",
+        "cached": false,
+        "modelFetchWallMs": 342.20000000298023,
+        "modelResources": [
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer.json",
+            "durationMs": 15.5,
+            "transferBytes": 439425,
+            "decodedBytes": 439125,
+            "startTime": 311.29999999701977,
+            "responseEnd": 326.79999999701977
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer_config.json",
+            "durationMs": 116,
+            "transferBytes": 667,
+            "decodedBytes": 367,
+            "startTime": 311.8999999985099,
+            "responseEnd": 427.8999999985099
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/config.json",
+            "durationMs": 115.20000000298023,
+            "transferBytes": 1016,
+            "decodedBytes": 716,
+            "startTime": 313.29999999701977,
+            "responseEnd": 428.5
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/onnx/model_quantized.onnx",
+            "durationMs": 187.80000000447035,
+            "transferBytes": 24011142,
+            "decodedBytes": 24010842,
+            "startTime": 465.69999999552965,
+            "responseEnd": 653.5
+          }
+        ]
+      },
+      "hardware": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+        "concurrency": 16,
+        "deviceMemory": 16,
+        "gpu": null
+      },
+      "firstInferenceMs": 379.90000000596046,
+      "coldQuery": {
+        "searchMs": 63.70069999998668,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "beb68736fec964eca2ddf9ec52492eaab0bdc3dd81c26347e52521cfdb997d23",
+            "text": "端侧推理让文档和查询的向量计算发生在用户自己的浏览器。应用不调用云端推理 API。模型文件可以先下载并缓存，本地计算不依赖网络推理服务。原文和向量会通过本机接口写入本地 seekdb，因此浏览器本地计算不等于文档永远不离开浏览器；需要正确配置数据库的访问权限。",
+            "metadata": {
+              "chunk": 0,
+              "source": "浏览器隐私保护.md",
+              "documentId": "privacy",
+              "importedAt": "2026-11-07T13:26:14.236Z"
+            },
+            "score": 0.0323
+          },
+          {
+            "id": "d0be4edbbfed645697de3c23c1b5751fa0c4ea39f232222611993ea9d8c03c39",
+            "text": "每个知识库对应 seekdb 的独立集合，目录信息同样保存在 seekdb 中。浏览器仅在 localStorage 保存当前集合名称，不保存可替代检索的向量库。切换知识库时清空旧查询结果，所有写入和搜索请求都携带明确的集合名称。重启服务后集合目录能够恢复。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库会话管理.md",
+              "documentId": "collections",
+              "importedAt": "2026-11-07T13:26:14.237Z"
+            },
+            "score": 0.0308
+          },
+          {
+            "id": "8cbfba3459944d355621174904174c882cc8d6e0d71b7cd9726f93956bea81f8",
+            "text": "中文全文检索需要分词器。seekdb 支持 ik 分词，在本应用中选择 smart 模式。全文匹配利用倒排索引返回关键词相关文档，和语义向量路共同进入数据库混合检索。中文专有名词和英文技术术语可通过全文通道补充。",
+            "metadata": {
+              "chunk": 0,
+              "source": "中文全文索引.md",
+              "documentId": "fulltext",
+              "importedAt": "2026-11-07T13:26:14.237Z"
+            },
+            "score": 0.0308
+          },
+          {
+            "id": "af16ab16ef0b47c2c288814050597e7423f9272c3fbe5bdded641d7d7ca6be65",
+            "text": "数据库文件应存放在持久化数据目录，容器部署需要挂载持久卷。备份前应按照 seekdb 运维要求确保一致性。模型文件可以重新下载，但用户文档与向量需要独立备份。删除浏览器缓存不会删除 seekdb 中的知识库数据。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库备份.md",
+              "documentId": "backup",
+              "importedAt": "2026-11-07T13:26:14.237Z"
+            },
+            "score": 0.0301
+          },
+          {
+            "id": "f215d4508970a6105829e42205ad9c7b724fbd460be6ae52f51911c2ea528eae",
+            "text": "Recall@K 衡量前 K 条结果覆盖的相关文档比例。nDCG@K 考虑相关文档在结果列表中的位置，排名越靠前收益越高。量化前后使用同一批文档和人工标注查询，按文档 ID 去重再计算指标。小数据集只能作为冒烟验证，不能证明在所有真实语料上质量相同。",
+            "metadata": {
+              "chunk": 0,
+              "source": "检索质量评测.md",
+              "documentId": "metrics",
+              "importedAt": "2026-11-07T13:26:14.237Z"
+            },
+            "score": 0.03
+          }
+        ],
+        "queryEmbedMs": 60,
+        "e2eMs": 140
+      },
+      "imports": [
+        {
+          "chunks": 24,
+          "embedMs": 3760.399999976158,
+          "writeMs": 531.6417000000074,
+          "refreshMs": 15875.751600000018,
+          "totalMs": 21144,
+          "throughput": 6.382299755385642
+        },
+        {
+          "chunks": 24,
+          "embedMs": 3821.400000028312,
+          "writeMs": 284.2990000000282,
+          "refreshMs": 14287.269499999966,
+          "totalMs": 19353,
+          "throughput": 6.280420788146278
+        },
+        {
+          "chunks": 24,
+          "embedMs": 3918.8000000044703,
+          "writeMs": 294.54979999992065,
+          "refreshMs": 15448.220200000069,
+          "totalMs": 20727.90000000596,
+          "throughput": 6.124323772576457
+        }
+      ],
+      "queries": [
+        {
+          "repetition": 0,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 53.80000000447035,
+          "searchMs": 50.16599999999744,
+          "e2eMs": 122.19999999552965,
+          "displayMs": 123.19999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 57,
+          "searchMs": 52.93520000000717,
+          "e2eMs": 125.89999999850988,
+          "displayMs": 126.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 76.10000000149012,
+          "searchMs": 48.421100000006845,
+          "e2eMs": 141.29999999701977,
+          "displayMs": 142.69999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 73.39999999850988,
+          "searchMs": 54.83049999998184,
+          "e2eMs": 152.5,
+          "displayMs": 153.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.20000000298023,
+          "searchMs": 51.63980000000447,
+          "e2eMs": 135.69999999552965,
+          "displayMs": 136.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 78.89999999850988,
+          "searchMs": 48.624600000010105,
+          "e2eMs": 144.29999999701977,
+          "displayMs": 144.69999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "chunking",
+            "offline"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.43067655807339306,
+          "queryEmbedMs": 72.19999999552965,
+          "searchMs": 50.078000000008615,
+          "e2eMs": 149.5,
+          "displayMs": 150.10000000149012
+        },
+        {
+          "repetition": 0,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.90000000596046,
+          "searchMs": 53.45140000001993,
+          "e2eMs": 139.70000000298023,
+          "displayMs": 140
+        },
+        {
+          "repetition": 0,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 59.29999999701977,
+          "searchMs": 48.599300000001676,
+          "e2eMs": 127.89999999850988,
+          "displayMs": 128.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.399999998509884,
+          "searchMs": 48.60540000000037,
+          "e2eMs": 128.40000000596046,
+          "displayMs": 129
+        },
+        {
+          "repetition": 0,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 50.100000001490116,
+          "searchMs": 49.789099999994505,
+          "e2eMs": 116.60000000149012,
+          "displayMs": 117.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.40000000596046,
+          "searchMs": 46.81830000001355,
+          "e2eMs": 133.09999999403954,
+          "displayMs": 134
+        },
+        {
+          "repetition": 0,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.20000000298023,
+          "searchMs": 48.863400000002,
+          "e2eMs": 135.60000000149012,
+          "displayMs": 136.10000000149012
+        },
+        {
+          "repetition": 0,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "metrics",
+            "collections"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 52.100000001490116,
+          "searchMs": 50.71040000001085,
+          "e2eMs": 120.5,
+          "displayMs": 120.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 50.30000000447035,
+          "searchMs": 51.006300000008196,
+          "e2eMs": 120.19999999552965,
+          "displayMs": 120.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 68.89999999850988,
+          "searchMs": 48.49360000001616,
+          "e2eMs": 139.09999999403954,
+          "displayMs": 140
+        },
+        {
+          "repetition": 1,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.19999999552965,
+          "searchMs": 47.86590000000433,
+          "e2eMs": 135.10000000149012,
+          "displayMs": 135.80000000447035
+        },
+        {
+          "repetition": 1,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.79999999701977,
+          "searchMs": 48.102000000013504,
+          "e2eMs": 133.39999999850988,
+          "displayMs": 135.5
+        },
+        {
+          "repetition": 1,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.19999999552965,
+          "searchMs": 48.44430000000284,
+          "e2eMs": 136.80000000447035,
+          "displayMs": 137.40000000596046
+        },
+        {
+          "repetition": 1,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 75.20000000298023,
+          "searchMs": 45.41060000000289,
+          "e2eMs": 137.09999999403954,
+          "displayMs": 137.69999999552965
+        },
+        {
+          "repetition": 1,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 48.29999999701977,
+          "searchMs": 51.49199999999837,
+          "e2eMs": 114.39999999850988,
+          "displayMs": 114.79999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 55.5,
+          "searchMs": 49.161800000001676,
+          "e2eMs": 125.5,
+          "displayMs": 126
+        },
+        {
+          "repetition": 1,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "chunking",
+            "offline"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.43067655807339306,
+          "queryEmbedMs": 66.5,
+          "searchMs": 49.27600000001257,
+          "e2eMs": 131.89999999850988,
+          "displayMs": 132.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 49.20000000298023,
+          "searchMs": 44.928000000014435,
+          "e2eMs": 110.5,
+          "displayMs": 110.79999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 49.600000001490116,
+          "searchMs": 50.53350000001956,
+          "e2eMs": 121.30000000447035,
+          "displayMs": 121.70000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 45.30000000447035,
+          "searchMs": 49.043900000018766,
+          "e2eMs": 110.89999999850988,
+          "displayMs": 111.29999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 69.10000000149012,
+          "searchMs": 51.638100000011036,
+          "e2eMs": 144.70000000298023,
+          "displayMs": 145.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 69.89999999850988,
+          "searchMs": 49.85610000000452,
+          "e2eMs": 141.79999999701977,
+          "displayMs": 142.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64,
+          "searchMs": 50.35490000000573,
+          "e2eMs": 135.60000000149012,
+          "displayMs": 136
+        },
+        {
+          "repetition": 1,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "metrics",
+            "collections"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 48.30000000447035,
+          "searchMs": 53.01920000000973,
+          "e2eMs": 117.5,
+          "displayMs": 117.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 56.399999998509884,
+          "searchMs": 46.79199999998673,
+          "e2eMs": 124.80000000447035,
+          "displayMs": 125.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 85.20000000298023,
+          "searchMs": 51.961899999994785,
+          "e2eMs": 165.39999999850988,
+          "displayMs": 166
+        },
+        {
+          "repetition": 2,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 61.29999999701977,
+          "searchMs": 47.7213000000047,
+          "e2eMs": 128.59999999403954,
+          "displayMs": 129.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 49.399999998509884,
+          "searchMs": 48.53139999997802,
+          "e2eMs": 116.29999999701977,
+          "displayMs": 116.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 44.69999999552965,
+          "searchMs": 48.80189999999129,
+          "e2eMs": 110.19999999552965,
+          "displayMs": 110.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 67.89999999850988,
+          "searchMs": 47.734800000005635,
+          "e2eMs": 135.30000000447035,
+          "displayMs": 135.90000000596046
+        },
+        {
+          "repetition": 2,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 63.29999999701977,
+          "searchMs": 50.02530000000843,
+          "e2eMs": 131.80000000447035,
+          "displayMs": 132.20000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 53.600000001490116,
+          "searchMs": 48.53299999999581,
+          "e2eMs": 122.60000000149012,
+          "displayMs": 123.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "chunking",
+            "offline"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.43067655807339306,
+          "queryEmbedMs": 63.899999998509884,
+          "searchMs": 49.68280000000959,
+          "e2eMs": 131.90000000596046,
+          "displayMs": 132.80000000447035
+        },
+        {
+          "repetition": 2,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 73.10000000149012,
+          "searchMs": 50.2613999999885,
+          "e2eMs": 143.60000000149012,
+          "displayMs": 144.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 60.899999998509884,
+          "searchMs": 46.360799999994924,
+          "e2eMs": 126.70000000298023,
+          "displayMs": 126.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 58.100000001490116,
+          "searchMs": 50.31709999998566,
+          "e2eMs": 131.10000000149012,
+          "displayMs": 132.20000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 80.70000000298023,
+          "searchMs": 47.532500000001164,
+          "e2eMs": 145.39999999850988,
+          "displayMs": 145.79999999701977
+        },
+        {
+          "repetition": 2,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.100000001490116,
+          "searchMs": 48.07850000000326,
+          "e2eMs": 132.39999999850988,
+          "displayMs": 132.80000000447035
+        },
+        {
+          "repetition": 2,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 52,
+          "searchMs": 46.570599999977276,
+          "e2eMs": 116,
+          "displayMs": 116.39999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "metrics",
+            "collections"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.399999998509884,
+          "searchMs": 45.914099999994505,
+          "e2eMs": 128.89999999850988,
+          "displayMs": 129.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 51.600000001490116,
+          "searchMs": 46.25140000000829,
+          "e2eMs": 114.5,
+          "displayMs": 115.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 71.70000000298023,
+          "searchMs": 55.33280000000377,
+          "e2eMs": 147.20000000298023,
+          "displayMs": 147.70000000298023
+        }
+      ],
+      "browserVersion": "157.0.4341.42",
+      "externalRequests": [],
+      "browserErrors": [],
+      "summary": {
+        "throughput": 6.280420788146278,
+        "importTotalMs": 20727.90000000596,
+        "embedMs": 3821.400000028312,
+        "writeMs": 294.54979999992065,
+        "refreshMs": 15448.220200000069,
+        "queryEmbedMs": 62.399999998509884,
+        "searchMs": 48.953650000010384,
+        "e2eMs": 131.85000000149012,
+        "displayMs": 132.40000000223517,
+        "recall5": 0.9375,
+        "ndcg5": 0.8788503944778032
+      }
+    },
+    {
+      "config": {
+        "name": "INT8 WASM batched",
+        "dtype": "q8",
+        "forceWasm": true,
+        "batchSize": 8,
+        "refreshEveryBatch": true
+      },
+      "load": {
+        "backend": "wasm",
+        "precision": "q8",
+        "loadMs": 1490.2999999970198,
+        "fallbackReason": "已强制 WASM（降级验证）",
+        "cached": false,
+        "modelFetchWallMs": 233.60000000149012,
+        "modelResources": [
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer.json",
+            "durationMs": 13.899999998509884,
+            "transferBytes": 439425,
+            "decodedBytes": 439125,
+            "startTime": 321.1000000014901,
+            "responseEnd": 335
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer_config.json",
+            "durationMs": 10.300000004470348,
+            "transferBytes": 667,
+            "decodedBytes": 367,
+            "startTime": 321.3999999985099,
+            "responseEnd": 331.70000000298023
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/config.json",
+            "durationMs": 11.700000002980232,
+            "transferBytes": 1016,
+            "decodedBytes": 716,
+            "startTime": 321.6000000014901,
+            "responseEnd": 333.30000000447035
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/onnx/model_quantized.onnx",
+            "durationMs": 190.89999999850988,
+            "transferBytes": 24011142,
+            "decodedBytes": 24010842,
+            "startTime": 363.80000000447035,
+            "responseEnd": 554.7000000029802
+          }
+        ]
+      },
+      "hardware": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+        "concurrency": 16,
+        "deviceMemory": 16,
+        "gpu": null
+      },
+      "firstInferenceMs": 608.5,
+      "coldQuery": {
+        "searchMs": 53.63719999999739,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "beb68736fec964eca2ddf9ec52492eaab0bdc3dd81c26347e52521cfdb997d23",
+            "text": "端侧推理让文档和查询的向量计算发生在用户自己的浏览器。应用不调用云端推理 API。模型文件可以先下载并缓存，本地计算不依赖网络推理服务。原文和向量会通过本机接口写入本地 seekdb，因此浏览器本地计算不等于文档永远不离开浏览器；需要正确配置数据库的访问权限。",
+            "metadata": {
+              "chunk": 0,
+              "source": "浏览器隐私保护.md",
+              "documentId": "privacy",
+              "importedAt": "2026-11-07T13:26:58.839Z"
+            },
+            "score": 0.0323
+          },
+          {
+            "id": "8cbfba3459944d355621174904174c882cc8d6e0d71b7cd9726f93956bea81f8",
+            "text": "中文全文检索需要分词器。seekdb 支持 ik 分词，在本应用中选择 smart 模式。全文匹配利用倒排索引返回关键词相关文档，和语义向量路共同进入数据库混合检索。中文专有名词和英文技术术语可通过全文通道补充。",
+            "metadata": {
+              "chunk": 0,
+              "source": "中文全文索引.md",
+              "documentId": "fulltext",
+              "importedAt": "2026-11-07T13:26:58.840Z"
+            },
+            "score": 0.031
+          },
+          {
+            "id": "d0be4edbbfed645697de3c23c1b5751fa0c4ea39f232222611993ea9d8c03c39",
+            "text": "每个知识库对应 seekdb 的独立集合，目录信息同样保存在 seekdb 中。浏览器仅在 localStorage 保存当前集合名称，不保存可替代检索的向量库。切换知识库时清空旧查询结果，所有写入和搜索请求都携带明确的集合名称。重启服务后集合目录能够恢复。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库会话管理.md",
+              "documentId": "collections",
+              "importedAt": "2026-11-07T13:26:58.839Z"
+            },
+            "score": 0.0308
+          },
+          {
+            "id": "af16ab16ef0b47c2c288814050597e7423f9272c3fbe5bdded641d7d7ca6be65",
+            "text": "数据库文件应存放在持久化数据目录，容器部署需要挂载持久卷。备份前应按照 seekdb 运维要求确保一致性。模型文件可以重新下载，但用户文档与向量需要独立备份。删除浏览器缓存不会删除 seekdb 中的知识库数据。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库备份.md",
+              "documentId": "backup",
+              "importedAt": "2026-11-07T13:26:58.840Z"
+            },
+            "score": 0.0301
+          },
+          {
+            "id": "5508d444cd33c532a9b5e7e1cc005de6d22dfdb65e8eeea84674dd84aa5ef56f",
+            "text": "文档与片段使用稳定 ID，基于文档标识、片段序号和内容的 SHA-256 摘要。重复导入相同文件时使用 upsert，避免重复记录。新增文件产生新 ID 并增量写入。修改文档内容视为新版本，旧版本不会自动删除。连续导入时应保持当前知识库绑定，避免异步任务写入其他集合。",
+            "metadata": {
+              "chunk": 0,
+              "source": "增量导入与去重.md",
+              "documentId": "idempotency",
+              "importedAt": "2026-11-07T13:26:58.839Z"
+            },
+            "score": 0.0298
+          }
+        ],
+        "queryEmbedMs": 64,
+        "e2eMs": 139.5
+      },
+      "imports": [
+        {
+          "chunks": 24,
+          "embedMs": 4836.29999999702,
+          "writeMs": 166.8417999999947,
+          "refreshMs": 1513.750400000048,
+          "totalMs": 6686.70000000298,
+          "throughput": 4.9624713107157925
+        },
+        {
+          "chunks": 24,
+          "embedMs": 4187.099999986589,
+          "writeMs": 188.87830000001122,
+          "refreshMs": 1516.7014999999956,
+          "totalMs": 6042.69999999553,
+          "throughput": 5.731890807498477
+        },
+        {
+          "chunks": 24,
+          "embedMs": 4367.4000000059605,
+          "writeMs": 201.83400000000256,
+          "refreshMs": 1779.7699999999895,
+          "totalMs": 6513.20000000298,
+          "throughput": 5.495260337951011
+        }
+      ],
+      "queries": [
+        {
+          "repetition": 0,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "fulltext",
+            "collections",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 66.10000000149012,
+          "searchMs": 48.4368999999715,
+          "e2eMs": 140.39999999850988,
+          "displayMs": 140.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 57.79999999701977,
+          "searchMs": 48.09460000001127,
+          "e2eMs": 126.29999999701977,
+          "displayMs": 126.69999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 61.69999999552965,
+          "searchMs": 50.62909999999101,
+          "e2eMs": 134.39999999850988,
+          "displayMs": 135.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 60.899999998509884,
+          "searchMs": 50.31400000001304,
+          "e2eMs": 132.20000000298023,
+          "displayMs": 133.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 57.100000001490116,
+          "searchMs": 51.36509999999544,
+          "e2eMs": 131.70000000298023,
+          "displayMs": 132.5
+        },
+        {
+          "repetition": 0,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 66.40000000596046,
+          "searchMs": 53.450700000015786,
+          "e2eMs": 141.30000000447035,
+          "displayMs": 141.80000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "worker",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 80.89999999850988,
+          "searchMs": 49.546899999986636,
+          "e2eMs": 150.60000000149012,
+          "displayMs": 150.90000000596046
+        },
+        {
+          "repetition": 0,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "version"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 70.60000000149012,
+          "searchMs": 49.44330000001355,
+          "e2eMs": 140.20000000298023,
+          "displayMs": 140.60000000149012
+        },
+        {
+          "repetition": 0,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 43.400000005960464,
+          "searchMs": 52.18979999999283,
+          "e2eMs": 115,
+          "displayMs": 115.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.69999999552965,
+          "searchMs": 45.477200000023004,
+          "e2eMs": 124.70000000298023,
+          "displayMs": 125.30000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 60.899999998509884,
+          "searchMs": 46.646000000007916,
+          "e2eMs": 123.89999999850988,
+          "displayMs": 124.29999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 59.19999999552965,
+          "searchMs": 49.50359999999637,
+          "e2eMs": 124.70000000298023,
+          "displayMs": 125.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 57.399999998509884,
+          "searchMs": 49.35579999999027,
+          "e2eMs": 127.29999999701977,
+          "displayMs": 128.70000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "metrics",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 78.29999999701977,
+          "searchMs": 50.10979999997653,
+          "e2eMs": 150.20000000298023,
+          "displayMs": 150.80000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "pooling",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 72.70000000298023,
+          "searchMs": 50.60639999998966,
+          "e2eMs": 150.19999999552965,
+          "displayMs": 150.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 79.29999999701977,
+          "searchMs": 48.23509999999078,
+          "e2eMs": 151.10000000149012,
+          "displayMs": 151.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "fulltext",
+            "collections",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 70.70000000298023,
+          "searchMs": 52.16800000000512,
+          "e2eMs": 141.30000000447035,
+          "displayMs": 141.5
+        },
+        {
+          "repetition": 1,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 47.600000001490116,
+          "searchMs": 47.63879999998608,
+          "e2eMs": 111.30000000447035,
+          "displayMs": 111.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 81.59999999403954,
+          "searchMs": 49.7896999999939,
+          "e2eMs": 155.5,
+          "displayMs": 156.10000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 59.899999998509884,
+          "searchMs": 46.24220000000787,
+          "e2eMs": 124.89999999850988,
+          "displayMs": 125.39999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67,
+          "searchMs": 52.36250000001746,
+          "e2eMs": 144.10000000149012,
+          "displayMs": 144.70000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 75.5,
+          "searchMs": 53.05840000000899,
+          "e2eMs": 154.09999999403954,
+          "displayMs": 154.59999999403954
+        },
+        {
+          "repetition": 1,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "worker",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 76.5,
+          "searchMs": 50.30809999999474,
+          "e2eMs": 150.10000000149012,
+          "displayMs": 150.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "version"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 74,
+          "searchMs": 50.84450000000652,
+          "e2eMs": 145.30000000447035,
+          "displayMs": 145.70000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65,
+          "searchMs": 52.305999999982305,
+          "e2eMs": 137.5,
+          "displayMs": 138.10000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 48.30000000447035,
+          "searchMs": 49.98619999998482,
+          "e2eMs": 116.39999999850988,
+          "displayMs": 117
+        },
+        {
+          "repetition": 1,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 74.10000000149012,
+          "searchMs": 50.397300000011455,
+          "e2eMs": 163.39999999850988,
+          "displayMs": 164.5
+        },
+        {
+          "repetition": 1,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.19999999552965,
+          "searchMs": 52.07740000000922,
+          "e2eMs": 136.80000000447035,
+          "displayMs": 137.5
+        },
+        {
+          "repetition": 1,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 72.60000000149012,
+          "searchMs": 51.60209999998915,
+          "e2eMs": 150.60000000149012,
+          "displayMs": 151
+        },
+        {
+          "repetition": 1,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "metrics",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.89999999850988,
+          "searchMs": 49.564400000002934,
+          "e2eMs": 135.5,
+          "displayMs": 135.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "pooling",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.5,
+          "searchMs": 52.273099999991246,
+          "e2eMs": 135.5,
+          "displayMs": 136.20000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 58.400000005960464,
+          "searchMs": 51.704999999987194,
+          "e2eMs": 132,
+          "displayMs": 132.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "fulltext",
+            "collections",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.59999999403954,
+          "searchMs": 49.345200000010664,
+          "e2eMs": 132.60000000149012,
+          "displayMs": 133.70000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 55.70000000298023,
+          "searchMs": 46.1704000000027,
+          "e2eMs": 122.30000000447035,
+          "displayMs": 123
+        },
+        {
+          "repetition": 2,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.79999999701977,
+          "searchMs": 53.41380000000936,
+          "e2eMs": 142.10000000149012,
+          "displayMs": 142.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 72.5,
+          "searchMs": 50.83940000002622,
+          "e2eMs": 145.5,
+          "displayMs": 146.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 66.29999999701977,
+          "searchMs": 51.1191000000108,
+          "e2eMs": 137.39999999850988,
+          "displayMs": 138.39999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 73.5,
+          "searchMs": 48.56049999999232,
+          "e2eMs": 139.80000000447035,
+          "displayMs": 140.20000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "worker",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 51.79999999701977,
+          "searchMs": 47.87569999997504,
+          "e2eMs": 117.19999999552965,
+          "displayMs": 117.69999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "version"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 63.400000005960464,
+          "searchMs": 48.10670000000391,
+          "e2eMs": 127.20000000298023,
+          "displayMs": 127.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.89999999850988,
+          "searchMs": 47.538300000014715,
+          "e2eMs": 132.39999999850988,
+          "displayMs": 132.70000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 79.89999999850988,
+          "searchMs": 46.36109999998007,
+          "e2eMs": 142.90000000596046,
+          "displayMs": 143.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 71.10000000149012,
+          "searchMs": 49.9826999999932,
+          "e2eMs": 143,
+          "displayMs": 143.39999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 74.89999999850988,
+          "searchMs": 50.49330000000191,
+          "e2eMs": 147.90000000596046,
+          "displayMs": 148.40000000596046
+        },
+        {
+          "repetition": 2,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.5,
+          "searchMs": 58.54739999998128,
+          "e2eMs": 155.19999999552965,
+          "displayMs": 155.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "metrics",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 61.900000005960464,
+          "searchMs": 45.51039999999921,
+          "e2eMs": 125.39999999850988,
+          "displayMs": 126.5
+        },
+        {
+          "repetition": 2,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "pooling",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 72,
+          "searchMs": 49.71249999999418,
+          "e2eMs": 138.5,
+          "displayMs": 138.69999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 55.19999999552965,
+          "searchMs": 49.641499999997905,
+          "e2eMs": 122.79999999701977,
+          "displayMs": 123.29999999701977
+        }
+      ],
+      "browserVersion": "157.0.4341.42",
+      "externalRequests": [],
+      "browserErrors": [],
+      "summary": {
+        "throughput": 5.495260337951011,
+        "importTotalMs": 6513.20000000298,
+        "embedMs": 4367.4000000059605,
+        "writeMs": 188.87830000001122,
+        "refreshMs": 1516.7014999999956,
+        "queryEmbedMs": 65.84999999776483,
+        "searchMs": 49.98444999998901,
+        "e2eMs": 137.44999999925494,
+        "displayMs": 138.25,
+        "recall5": 0.9375,
+        "ndcg5": 0.8761114100503749
+      }
+    },
+    {
+      "config": {
+        "name": "INT8 WASM optimized",
+        "dtype": "q8",
+        "forceWasm": true,
+        "batchSize": 8,
+        "refreshEveryBatch": false
+      },
+      "load": {
+        "backend": "wasm",
+        "precision": "q8",
+        "loadMs": 1113.5,
+        "fallbackReason": "已强制 WASM（降级验证）",
+        "cached": false,
+        "modelFetchWallMs": 165.19999999552965,
+        "modelResources": [
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer.json",
+            "durationMs": 13.399999998509884,
+            "transferBytes": 439425,
+            "decodedBytes": 439125,
+            "startTime": 271.5,
+            "responseEnd": 284.8999999985099
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer_config.json",
+            "durationMs": 10.5,
+            "transferBytes": 667,
+            "decodedBytes": 367,
+            "startTime": 271.69999999552965,
+            "responseEnd": 282.19999999552965
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/config.json",
+            "durationMs": 9.399999998509884,
+            "transferBytes": 1016,
+            "decodedBytes": 716,
+            "startTime": 272,
+            "responseEnd": 281.3999999985099
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/onnx/model_quantized.onnx",
+            "durationMs": 147.39999999850988,
+            "transferBytes": 24011142,
+            "decodedBytes": 24010842,
+            "startTime": 289.29999999701977,
+            "responseEnd": 436.69999999552965
+          }
+        ]
+      },
+      "hardware": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+        "concurrency": 16,
+        "deviceMemory": 16,
+        "gpu": null
+      },
+      "firstInferenceMs": 264.5,
+      "coldQuery": {
+        "searchMs": 47.20309999998426,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "beb68736fec964eca2ddf9ec52492eaab0bdc3dd81c26347e52521cfdb997d23",
+            "text": "端侧推理让文档和查询的向量计算发生在用户自己的浏览器。应用不调用云端推理 API。模型文件可以先下载并缓存，本地计算不依赖网络推理服务。原文和向量会通过本机接口写入本地 seekdb，因此浏览器本地计算不等于文档永远不离开浏览器；需要正确配置数据库的访问权限。",
+            "metadata": {
+              "chunk": 0,
+              "source": "浏览器隐私保护.md",
+              "documentId": "privacy",
+              "importedAt": "2026-11-07T13:27:26.384Z"
+            },
+            "score": 0.0323
+          },
+          {
+            "id": "8cbfba3459944d355621174904174c882cc8d6e0d71b7cd9726f93956bea81f8",
+            "text": "中文全文检索需要分词器。seekdb 支持 ik 分词，在本应用中选择 smart 模式。全文匹配利用倒排索引返回关键词相关文档，和语义向量路共同进入数据库混合检索。中文专有名词和英文技术术语可通过全文通道补充。",
+            "metadata": {
+              "chunk": 0,
+              "source": "中文全文索引.md",
+              "documentId": "fulltext",
+              "importedAt": "2026-11-07T13:27:26.385Z"
+            },
+            "score": 0.031
+          },
+          {
+            "id": "d0be4edbbfed645697de3c23c1b5751fa0c4ea39f232222611993ea9d8c03c39",
+            "text": "每个知识库对应 seekdb 的独立集合，目录信息同样保存在 seekdb 中。浏览器仅在 localStorage 保存当前集合名称，不保存可替代检索的向量库。切换知识库时清空旧查询结果，所有写入和搜索请求都携带明确的集合名称。重启服务后集合目录能够恢复。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库会话管理.md",
+              "documentId": "collections",
+              "importedAt": "2026-11-07T13:27:26.385Z"
+            },
+            "score": 0.0308
+          },
+          {
+            "id": "af16ab16ef0b47c2c288814050597e7423f9272c3fbe5bdded641d7d7ca6be65",
+            "text": "数据库文件应存放在持久化数据目录，容器部署需要挂载持久卷。备份前应按照 seekdb 运维要求确保一致性。模型文件可以重新下载，但用户文档与向量需要独立备份。删除浏览器缓存不会删除 seekdb 中的知识库数据。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库备份.md",
+              "documentId": "backup",
+              "importedAt": "2026-11-07T13:27:26.385Z"
+            },
+            "score": 0.0301
+          },
+          {
+            "id": "5508d444cd33c532a9b5e7e1cc005de6d22dfdb65e8eeea84674dd84aa5ef56f",
+            "text": "文档与片段使用稳定 ID，基于文档标识、片段序号和内容的 SHA-256 摘要。重复导入相同文件时使用 upsert，避免重复记录。新增文件产生新 ID 并增量写入。修改文档内容视为新版本，旧版本不会自动删除。连续导入时应保持当前知识库绑定，避免异步任务写入其他集合。",
+            "metadata": {
+              "chunk": 0,
+              "source": "增量导入与去重.md",
+              "documentId": "idempotency",
+              "importedAt": "2026-11-07T13:27:26.385Z"
+            },
+            "score": 0.0298
+          }
+        ],
+        "queryEmbedMs": 77.29999999701977,
+        "e2eMs": 144.39999999850988
+      },
+      "imports": [
+        {
+          "chunks": 24,
+          "embedMs": 4324.70000000298,
+          "writeMs": 195.79689999998664,
+          "refreshMs": 379.7704000000085,
+          "totalMs": 5058.4000000059605,
+          "throughput": 5.549517885629862
+        },
+        {
+          "chunks": 24,
+          "embedMs": 4233.9000000059605,
+          "writeMs": 197.6025999999838,
+          "refreshMs": 466.3826999999874,
+          "totalMs": 5023.29999999702,
+          "throughput": 5.668532558625903
+        },
+        {
+          "chunks": 24,
+          "embedMs": 4381.70000000298,
+          "writeMs": 194.83199999996577,
+          "refreshMs": 563.199099999998,
+          "totalMs": 5268.5,
+          "throughput": 5.477326151946431
+        }
+      ],
+      "queries": [
+        {
+          "repetition": 0,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "fulltext",
+            "collections",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 45.600000001490116,
+          "searchMs": 49.413000000000466,
+          "e2eMs": 108.10000000149012,
+          "displayMs": 108.5
+        },
+        {
+          "repetition": 0,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 62.5,
+          "searchMs": 46.75209999998333,
+          "e2eMs": 127.40000000596046,
+          "displayMs": 127.70000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 53.600000001490116,
+          "searchMs": 47.603799999982584,
+          "e2eMs": 118.69999999552965,
+          "displayMs": 119
+        },
+        {
+          "repetition": 0,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 58.69999999552965,
+          "searchMs": 47.439400000002934,
+          "e2eMs": 127.59999999403954,
+          "displayMs": 128.5
+        },
+        {
+          "repetition": 0,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 59,
+          "searchMs": 46.234900000010384,
+          "e2eMs": 122.79999999701977,
+          "displayMs": 123.29999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 49.5,
+          "searchMs": 45.92410000000382,
+          "e2eMs": 110,
+          "displayMs": 110.29999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "worker",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 47.399999998509884,
+          "searchMs": 43.88359999997192,
+          "e2eMs": 105.89999999850988,
+          "displayMs": 106.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "version"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 61.899999998509884,
+          "searchMs": 51.62260000000242,
+          "e2eMs": 131.59999999403954,
+          "displayMs": 132.19999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.59999999403954,
+          "searchMs": 47.58939999999711,
+          "e2eMs": 131.5,
+          "displayMs": 132
+        },
+        {
+          "repetition": 0,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.10000000149012,
+          "searchMs": 47.911800000001676,
+          "e2eMs": 129,
+          "displayMs": 129.5
+        },
+        {
+          "repetition": 0,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 65.5,
+          "searchMs": 46.01879999999073,
+          "e2eMs": 130.10000000149012,
+          "displayMs": 131.30000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.89999999850988,
+          "searchMs": 44.97479999999632,
+          "e2eMs": 129.19999999552965,
+          "displayMs": 129.59999999403954
+        },
+        {
+          "repetition": 0,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 50.30000000447035,
+          "searchMs": 45.87210000000778,
+          "e2eMs": 110.30000000447035,
+          "displayMs": 110.70000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "metrics",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 71.5,
+          "searchMs": 47.81510000000708,
+          "e2eMs": 139.29999999701977,
+          "displayMs": 139.69999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "pooling",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 48.399999998509884,
+          "searchMs": 49.569900000002235,
+          "e2eMs": 117.60000000149012,
+          "displayMs": 117.89999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 60.69999999552965,
+          "searchMs": 48.31829999998445,
+          "e2eMs": 130.29999999701977,
+          "displayMs": 130.5
+        },
+        {
+          "repetition": 1,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "fulltext",
+            "collections",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 69.30000000447035,
+          "searchMs": 46.54500000004191,
+          "e2eMs": 137.60000000149012,
+          "displayMs": 138.19999999552965
+        },
+        {
+          "repetition": 1,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 60.19999999552965,
+          "searchMs": 46.49739999999292,
+          "e2eMs": 124.5,
+          "displayMs": 125.20000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 44.20000000298023,
+          "searchMs": 46.9267000000109,
+          "e2eMs": 112.79999999701977,
+          "displayMs": 113
+        },
+        {
+          "repetition": 1,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 47.100000001490116,
+          "searchMs": 49.83229999995092,
+          "e2eMs": 113,
+          "displayMs": 113.29999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 55.70000000298023,
+          "searchMs": 59.78039999998873,
+          "e2eMs": 150.5,
+          "displayMs": 151
+        },
+        {
+          "repetition": 1,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 75.69999999552965,
+          "searchMs": 51.430799999972805,
+          "e2eMs": 146.69999999552965,
+          "displayMs": 147.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "worker",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 69.10000000149012,
+          "searchMs": 49.161500000045635,
+          "e2eMs": 136.39999999850988,
+          "displayMs": 136.59999999403954
+        },
+        {
+          "repetition": 1,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "version"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 54.399999998509884,
+          "searchMs": 46.89559999998892,
+          "e2eMs": 118.70000000298023,
+          "displayMs": 119.10000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 55.899999998509884,
+          "searchMs": 47.681199999991804,
+          "e2eMs": 122.20000000298023,
+          "displayMs": 122.79999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 50.30000000447035,
+          "searchMs": 50.68579999997746,
+          "e2eMs": 117.10000000149012,
+          "displayMs": 117.90000000596046
+        },
+        {
+          "repetition": 1,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.29999999701977,
+          "searchMs": 48.04989999998361,
+          "e2eMs": 132.90000000596046,
+          "displayMs": 133.30000000447035
+        },
+        {
+          "repetition": 1,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 51.100000001490116,
+          "searchMs": 47.3808999999892,
+          "e2eMs": 114.69999999552965,
+          "displayMs": 115.79999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 52.5,
+          "searchMs": 49.23800000001211,
+          "e2eMs": 121,
+          "displayMs": 121.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "metrics",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.69999999552965,
+          "searchMs": 52.02169999998296,
+          "e2eMs": 134.39999999850988,
+          "displayMs": 134.89999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "pooling",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 63,
+          "searchMs": 50.34440000000177,
+          "e2eMs": 136.60000000149012,
+          "displayMs": 137.10000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 62.70000000298023,
+          "searchMs": 47.68899999995483,
+          "e2eMs": 131.39999999850988,
+          "displayMs": 131.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "fulltext",
+            "collections",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 64.80000000447035,
+          "searchMs": 48.86089999997057,
+          "e2eMs": 130.39999999850988,
+          "displayMs": 130.69999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 57.79999999701977,
+          "searchMs": 52.79549999994924,
+          "e2eMs": 131.79999999701977,
+          "displayMs": 132.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.39999999850988,
+          "searchMs": 51.14350000000559,
+          "e2eMs": 138.5,
+          "displayMs": 138.80000000447035
+        },
+        {
+          "repetition": 2,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "collections",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 74.30000000447035,
+          "searchMs": 48.2945999999647,
+          "e2eMs": 142.89999999850988,
+          "displayMs": 143.5
+        },
+        {
+          "repetition": 2,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.60000000149012,
+          "searchMs": 46.15169999998761,
+          "e2eMs": 128.60000000149012,
+          "displayMs": 128.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 58,
+          "searchMs": 47.57690000004368,
+          "e2eMs": 126.19999999552965,
+          "displayMs": 127
+        },
+        {
+          "repetition": 2,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "worker",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 66.30000000447035,
+          "searchMs": 46.072899999970105,
+          "e2eMs": 130.89999999850988,
+          "displayMs": 131.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "version"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 63,
+          "searchMs": 47.238500000035856,
+          "e2eMs": 126.70000000298023,
+          "displayMs": 127.20000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "fallback"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67,
+          "searchMs": 45.98959999997169,
+          "e2eMs": 129.69999999552965,
+          "displayMs": 130.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "collections",
+            "hnsw",
+            "offline",
+            "version"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 46.099999994039536,
+          "searchMs": 47.977299999969546,
+          "e2eMs": 108.39999999850988,
+          "displayMs": 108.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 67.60000000149012,
+          "searchMs": 46.54989999998361,
+          "e2eMs": 132,
+          "displayMs": 132.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "hybrid"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 75.10000000149012,
+          "searchMs": 52.84470000001602,
+          "e2eMs": 149.30000000447035,
+          "displayMs": 149.90000000596046
+        },
+        {
+          "repetition": 2,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "timing"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 49.600000001490116,
+          "searchMs": 48.3691000000108,
+          "e2eMs": 118.90000000596046,
+          "displayMs": 119.30000000447035
+        },
+        {
+          "repetition": 2,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "metrics",
+            "collections",
+            "chunking"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 56.69999999552965,
+          "searchMs": 46.97080000001006,
+          "e2eMs": 123.79999999701977,
+          "displayMs": 124.19999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "pooling",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 56.899999998509884,
+          "searchMs": 48.2153999999864,
+          "e2eMs": 123.60000000149012,
+          "displayMs": 124.30000000447035
+        },
+        {
+          "repetition": 2,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "metrics"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 68.20000000298023,
+          "searchMs": 44.64669999998296,
+          "e2eMs": 133.89999999850988,
+          "displayMs": 134.19999999552965
+        }
+      ],
+      "browserVersion": "157.0.4341.42",
+      "externalRequests": [],
+      "browserErrors": [],
+      "summary": {
+        "throughput": 5.549517885629862,
+        "importTotalMs": 5058.4000000059605,
+        "embedMs": 4324.70000000298,
+        "writeMs": 195.79689999998664,
+        "refreshMs": 466.3826999999874,
+        "queryEmbedMs": 61.29999999701977,
+        "searchMs": 47.68509999997332,
+        "e2eMs": 128.80000000074506,
+        "displayMs": 129.19999999925494,
+        "recall5": 0.9375,
+        "ndcg5": 0.8761114100503749
+      }
+    },
+    {
+      "config": {
+        "name": "FP16 WebGPU preferred",
+        "dtype": "fp16",
+        "forceWasm": false,
+        "batchSize": 8,
+        "refreshEveryBatch": false,
+        "gpu": true
+      },
+      "load": {
+        "backend": "webgpu",
+        "precision": "fp16",
+        "loadMs": 2685.1999999955297,
+        "cached": false,
+        "modelFetchWallMs": 546,
+        "modelResources": [
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer.json",
+            "durationMs": 28,
+            "transferBytes": 439425,
+            "decodedBytes": 439125,
+            "startTime": 531.7000000029802,
+            "responseEnd": 559.7000000029802
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/tokenizer_config.json",
+            "durationMs": 24.899999998509884,
+            "transferBytes": 667,
+            "decodedBytes": 367,
+            "startTime": 532.1000000014901,
+            "responseEnd": 557
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/config.json",
+            "durationMs": 29.600000001490116,
+            "transferBytes": 1016,
+            "decodedBytes": 716,
+            "startTime": 532.3999999985099,
+            "responseEnd": 562
+          },
+          {
+            "file": "Xenova/bge-small-zh-v1.5/onnx/model_fp16.onnx",
+            "durationMs": 469.80000000447035,
+            "transferBytes": 47497727,
+            "decodedBytes": 47497427,
+            "startTime": 607.8999999985099,
+            "responseEnd": 1077.7000000029802
+          }
+        ]
+      },
+      "hardware": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+        "concurrency": 16,
+        "deviceMemory": 16,
+        "gpu": {
+          "vendor": "intel",
+          "architecture": "gen-12lp",
+          "device": "",
+          "description": "",
+          "features": [
+            "depth32float-stencil8",
+            "rg11b10ufloat-renderable",
+            "texture-formats-tier1",
+            "bgra8unorm-storage",
+            "chromium-experimental-multi-draw-indirect",
+            "texture-compression-bc",
+            "dual-source-blending",
+            "chromium-experimental-sampling-resource-table",
+            "core-features-and-limits",
+            "chromium-experimental-timestamp-query-inside-passes",
+            "float32-filterable",
+            "indirect-first-instance",
+            "float32-blendable",
+            "subgroup-size-control",
+            "texture-compression-unaligned",
+            "depth-clip-control",
+            "texture-compression-bc-sliced-3d",
+            "timestamp-query",
+            "clip-distances",
+            "shader-f16",
+            "texture-formats-tier2",
+            "primitive-index",
+            "texture-component-swizzle",
+            "subgroups"
+          ]
+        }
+      },
+      "firstInferenceMs": 969,
+      "coldQuery": {
+        "searchMs": 52.102200000023004,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "beb68736fec964eca2ddf9ec52492eaab0bdc3dd81c26347e52521cfdb997d23",
+            "text": "端侧推理让文档和查询的向量计算发生在用户自己的浏览器。应用不调用云端推理 API。模型文件可以先下载并缓存，本地计算不依赖网络推理服务。原文和向量会通过本机接口写入本地 seekdb，因此浏览器本地计算不等于文档永远不离开浏览器；需要正确配置数据库的访问权限。",
+            "metadata": {
+              "chunk": 0,
+              "source": "浏览器隐私保护.md",
+              "documentId": "privacy",
+              "importedAt": "2026-11-07T13:27:48.023Z"
+            },
+            "score": 0.032
+          },
+          {
+            "id": "d0be4edbbfed645697de3c23c1b5751fa0c4ea39f232222611993ea9d8c03c39",
+            "text": "每个知识库对应 seekdb 的独立集合，目录信息同样保存在 seekdb 中。浏览器仅在 localStorage 保存当前集合名称，不保存可替代检索的向量库。切换知识库时清空旧查询结果，所有写入和搜索请求都携带明确的集合名称。重启服务后集合目录能够恢复。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库会话管理.md",
+              "documentId": "collections",
+              "importedAt": "2026-11-07T13:27:48.024Z"
+            },
+            "score": 0.0308
+          },
+          {
+            "id": "8cbfba3459944d355621174904174c882cc8d6e0d71b7cd9726f93956bea81f8",
+            "text": "中文全文检索需要分词器。seekdb 支持 ik 分词，在本应用中选择 smart 模式。全文匹配利用倒排索引返回关键词相关文档，和语义向量路共同进入数据库混合检索。中文专有名词和英文技术术语可通过全文通道补充。",
+            "metadata": {
+              "chunk": 0,
+              "source": "中文全文索引.md",
+              "documentId": "fulltext",
+              "importedAt": "2026-11-07T13:27:48.024Z"
+            },
+            "score": 0.0303
+          },
+          {
+            "id": "af16ab16ef0b47c2c288814050597e7423f9272c3fbe5bdded641d7d7ca6be65",
+            "text": "数据库文件应存放在持久化数据目录，容器部署需要挂载持久卷。备份前应按照 seekdb 运维要求确保一致性。模型文件可以重新下载，但用户文档与向量需要独立备份。删除浏览器缓存不会删除 seekdb 中的知识库数据。",
+            "metadata": {
+              "chunk": 0,
+              "source": "知识库备份.md",
+              "documentId": "backup",
+              "importedAt": "2026-11-07T13:27:48.024Z"
+            },
+            "score": 0.0303
+          },
+          {
+            "id": "5508d444cd33c532a9b5e7e1cc005de6d22dfdb65e8eeea84674dd84aa5ef56f",
+            "text": "文档与片段使用稳定 ID，基于文档标识、片段序号和内容的 SHA-256 摘要。重复导入相同文件时使用 upsert，避免重复记录。新增文件产生新 ID 并增量写入。修改文档内容视为新版本，旧版本不会自动删除。连续导入时应保持当前知识库绑定，避免异步任务写入其他集合。",
+            "metadata": {
+              "chunk": 0,
+              "source": "增量导入与去重.md",
+              "documentId": "idempotency",
+              "importedAt": "2026-11-07T13:27:48.024Z"
+            },
+            "score": 0.0301
+          }
+        ],
+        "queryEmbedMs": 35.100000001490116,
+        "e2eMs": 106.79999999701977
+      },
+      "imports": [
+        {
+          "chunks": 24,
+          "embedMs": 648.7000000104308,
+          "writeMs": 174.71570000005886,
+          "refreshMs": 766.9593000000459,
+          "totalMs": 1715.6000000014901,
+          "throughput": 36.99707106461244
+        },
+        {
+          "chunks": 24,
+          "embedMs": 304.09999998658895,
+          "writeMs": 172.96189999999478,
+          "refreshMs": 375.2958000000217,
+          "totalMs": 1002.8999999985099,
+          "throughput": 78.92140743524637
+        },
+        {
+          "chunks": 24,
+          "embedMs": 354.7999999895692,
+          "writeMs": 197.28120000002673,
+          "refreshMs": 567.2689000000246,
+          "totalMs": 1268.6000000014901,
+          "throughput": 67.64374295576545
+        }
+      ],
+      "queries": [
+        {
+          "repetition": 0,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 25.299999997019768,
+          "searchMs": 46.837300000013784,
+          "e2eMs": 88.70000000298023,
+          "displayMs": 89.29999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 26.599999994039536,
+          "searchMs": 56.507299999997485,
+          "e2eMs": 125.5,
+          "displayMs": 125.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 22.899999998509884,
+          "searchMs": 51.26000000000931,
+          "e2eMs": 97.20000000298023,
+          "displayMs": 97.90000000596046
+        },
+        {
+          "repetition": 0,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 36.19999999552965,
+          "searchMs": 48.839699999953154,
+          "e2eMs": 106.89999999850988,
+          "displayMs": 107.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 46.29999999701977,
+          "searchMs": 51.06069999997271,
+          "e2eMs": 118.5,
+          "displayMs": 119.19999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 47.79999999701977,
+          "searchMs": 59.914199999999255,
+          "e2eMs": 135.29999999701977,
+          "displayMs": 136.20000000298023
+        },
+        {
+          "repetition": 0,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "offline",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 37.79999999701977,
+          "searchMs": 55.15789999999106,
+          "e2eMs": 132.69999999552965,
+          "displayMs": 134.29999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 41.79999999701977,
+          "searchMs": 51.65320000000065,
+          "e2eMs": 115.19999999552965,
+          "displayMs": 115.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "idempotency"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 38.19999999552965,
+          "searchMs": 47.648199999995995,
+          "e2eMs": 106,
+          "displayMs": 106.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "offline",
+            "version",
+            "worker",
+            "collections"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 22,
+          "searchMs": 49.162799999990966,
+          "e2eMs": 88.79999999701977,
+          "displayMs": 89.60000000149012
+        },
+        {
+          "repetition": 0,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 30,
+          "searchMs": 51.60600000002887,
+          "e2eMs": 102.29999999701977,
+          "displayMs": 102.79999999701977
+        },
+        {
+          "repetition": 0,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "chunking"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 26.599999994039536,
+          "searchMs": 50.00039999996079,
+          "e2eMs": 94.60000000149012,
+          "displayMs": 95.10000000149012
+        },
+        {
+          "repetition": 0,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "hnsw"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 33,
+          "searchMs": 54.755999999993946,
+          "e2eMs": 107.79999999701977,
+          "displayMs": 108.19999999552965
+        },
+        {
+          "repetition": 0,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "version",
+            "metrics"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 25.5,
+          "searchMs": 53.46500000002561,
+          "e2eMs": 102.39999999850988,
+          "displayMs": 102.80000000447035
+        },
+        {
+          "repetition": 0,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "chunking",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 35.399999998509884,
+          "searchMs": 49.11769999994431,
+          "e2eMs": 110.19999999552965,
+          "displayMs": 111.39999999850988
+        },
+        {
+          "repetition": 0,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "quantization"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 49.899999998509884,
+          "searchMs": 46.43559999996796,
+          "e2eMs": 115.70000000298023,
+          "displayMs": 115.90000000596046
+        },
+        {
+          "repetition": 1,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 25.100000001490116,
+          "searchMs": 48.67509999999311,
+          "e2eMs": 101.70000000298023,
+          "displayMs": 102.20000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 27.900000005960464,
+          "searchMs": 54.739700000034645,
+          "e2eMs": 107.69999999552965,
+          "displayMs": 108.29999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 39.5,
+          "searchMs": 53.43449999997392,
+          "e2eMs": 131.89999999850988,
+          "displayMs": 132.5
+        },
+        {
+          "repetition": 1,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 29.600000001490116,
+          "searchMs": 58.75759999995353,
+          "e2eMs": 123.60000000149012,
+          "displayMs": 124.10000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 29.200000002980232,
+          "searchMs": 51.663899999985006,
+          "e2eMs": 111.80000000447035,
+          "displayMs": 112.5
+        },
+        {
+          "repetition": 1,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 29.899999998509884,
+          "searchMs": 47.68460000003688,
+          "e2eMs": 105.30000000447035,
+          "displayMs": 106.39999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "offline",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 43.5,
+          "searchMs": 47.81299999996554,
+          "e2eMs": 115.70000000298023,
+          "displayMs": 116.30000000447035
+        },
+        {
+          "repetition": 1,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 26.700000002980232,
+          "searchMs": 48.5683999999892,
+          "e2eMs": 96.30000000447035,
+          "displayMs": 96.60000000149012
+        },
+        {
+          "repetition": 1,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "idempotency"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 35.69999999552965,
+          "searchMs": 48.945200000016484,
+          "e2eMs": 108.79999999701977,
+          "displayMs": 109.29999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "offline",
+            "version",
+            "worker",
+            "collections"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 24.899999998509884,
+          "searchMs": 52.81559999997262,
+          "e2eMs": 98.60000000149012,
+          "displayMs": 99.20000000298023
+        },
+        {
+          "repetition": 1,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 38.100000001490116,
+          "searchMs": 50.44020000001183,
+          "e2eMs": 115.89999999850988,
+          "displayMs": 116.29999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "chunking"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 25.700000002980232,
+          "searchMs": 50.74009999999544,
+          "e2eMs": 101.39999999850988,
+          "displayMs": 101.79999999701977
+        },
+        {
+          "repetition": 1,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "hnsw"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 33.29999999701977,
+          "searchMs": 47.98129999998491,
+          "e2eMs": 107.29999999701977,
+          "displayMs": 108.39999999850988
+        },
+        {
+          "repetition": 1,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "version",
+            "metrics"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 49.600000001490116,
+          "searchMs": 50.81400000001304,
+          "e2eMs": 133,
+          "displayMs": 133.5
+        },
+        {
+          "repetition": 1,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "chunking",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 53.899999998509884,
+          "searchMs": 51.085399999981746,
+          "e2eMs": 130.40000000596046,
+          "displayMs": 130.90000000596046
+        },
+        {
+          "repetition": 1,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "quantization"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 20.600000001490116,
+          "searchMs": 55.15359999996144,
+          "e2eMs": 95.69999999552965,
+          "displayMs": 96.09999999403954
+        },
+        {
+          "repetition": 2,
+          "query": "怎样在浏览器中保护文档隐私？",
+          "ids": [
+            "privacy",
+            "collections",
+            "fulltext",
+            "backup",
+            "idempotency"
+          ],
+          "relevant": [
+            "privacy"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 24.399999998509884,
+          "searchMs": 51.429100000008475,
+          "e2eMs": 95,
+          "displayMs": 95.5
+        },
+        {
+          "repetition": 2,
+          "query": "没有可用显卡适配器还能运行吗？",
+          "ids": [
+            "fallback",
+            "backup",
+            "fp16",
+            "batching",
+            "failure"
+          ],
+          "relevant": [
+            "fallback"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 26.200000002980232,
+          "searchMs": 48.349900000030175,
+          "e2eMs": 99.70000000298023,
+          "displayMs": 100.20000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "如何计算 INT8 模型的压缩比？",
+          "ids": [
+            "quantization",
+            "fp16",
+            "version",
+            "metrics",
+            "privacy"
+          ],
+          "relevant": [
+            "quantization"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 29.200000002980232,
+          "searchMs": 49.81020000000717,
+          "e2eMs": 106.5,
+          "displayMs": 107
+        },
+        {
+          "repetition": 2,
+          "query": "语义搜索和关键词搜索在哪里合并？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "collections",
+            "hnsw",
+            "rrf"
+          ],
+          "relevant": [
+            "hybrid"
+          ],
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "queryEmbedMs": 27.80000000447035,
+          "searchMs": 48.43719999998575,
+          "e2eMs": 108,
+          "displayMs": 108.5
+        },
+        {
+          "repetition": 2,
+          "query": "新添加的文档为什么要刷新索引？",
+          "ids": [
+            "refresh",
+            "failure",
+            "pooling",
+            "idempotency",
+            "hnsw"
+          ],
+          "relevant": [
+            "refresh"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 21.5,
+          "searchMs": 48.51400000002468,
+          "e2eMs": 89.09999999403954,
+          "displayMs": 89.69999999552965
+        },
+        {
+          "repetition": 2,
+          "query": "怎样一次处理多段文本提高吞吐？",
+          "ids": [
+            "batching",
+            "refresh",
+            "pooling",
+            "timing",
+            "idempotency"
+          ],
+          "relevant": [
+            "batching"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 32.5,
+          "searchMs": 55.04800000000978,
+          "e2eMs": 119.30000000447035,
+          "displayMs": 119.89999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "长篇文章超过模型输入上限怎么办？",
+          "ids": [
+            "pooling",
+            "batching",
+            "version",
+            "offline",
+            "chunking"
+          ],
+          "relevant": [
+            "chunking"
+          ],
+          "recall": 1,
+          "ndcg": 0.38685280723454163,
+          "queryEmbedMs": 23,
+          "searchMs": 51.26640000002226,
+          "e2eMs": 95.20000000298023,
+          "displayMs": 95.5
+        },
+        {
+          "repetition": 2,
+          "query": "中文 BGE 模型输出多少维，如何池化？",
+          "ids": [
+            "pooling",
+            "batching",
+            "hnsw",
+            "chunking",
+            "quantization"
+          ],
+          "relevant": [
+            "pooling"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 25.5,
+          "searchMs": 51.024700000009034,
+          "e2eMs": 100.80000000447035,
+          "displayMs": 101.60000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "如何避免 AI 推理卡住页面？",
+          "ids": [
+            "worker",
+            "privacy",
+            "cache",
+            "failure",
+            "idempotency"
+          ],
+          "relevant": [
+            "worker"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 26.30000000447035,
+          "searchMs": 53.176900000020396,
+          "e2eMs": 104.70000000298023,
+          "displayMs": 105.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "模型是否每次搜索都重新下载？",
+          "ids": [
+            "cache",
+            "offline",
+            "version",
+            "worker",
+            "collections"
+          ],
+          "relevant": [
+            "cache"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 34.19999999552965,
+          "searchMs": 51.73699999996461,
+          "e2eMs": 105.60000000149012,
+          "displayMs": 106.39999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "相同文件导入两遍会产生重复数据吗？",
+          "ids": [
+            "idempotency",
+            "failure",
+            "refresh",
+            "backup",
+            "metrics"
+          ],
+          "relevant": [
+            "idempotency"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 29.200000002980232,
+          "searchMs": 48.62220000004163,
+          "e2eMs": 96.70000000298023,
+          "displayMs": 97.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "切换知识库后如何避免看到旧结果？",
+          "ids": [
+            "collections",
+            "idempotency",
+            "failure",
+            "backup",
+            "chunking"
+          ],
+          "relevant": [
+            "collections"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 28,
+          "searchMs": 53.62770000001183,
+          "e2eMs": 101.69999999552965,
+          "displayMs": 102.10000000149012
+        },
+        {
+          "repetition": 2,
+          "query": "Recall 和 nDCG 分别衡量什么？",
+          "ids": [
+            "metrics",
+            "hybrid",
+            "quantization",
+            "fulltext",
+            "hnsw"
+          ],
+          "relevant": [
+            "metrics"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 33.600000001490116,
+          "searchMs": 53.86290000000736,
+          "e2eMs": 112.20000000298023,
+          "displayMs": 112.5
+        },
+        {
+          "repetition": 2,
+          "query": "性能实验应该记录哪些阶段的时间？",
+          "ids": [
+            "timing",
+            "offline",
+            "chunking",
+            "version",
+            "metrics"
+          ],
+          "relevant": [
+            "timing"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 35.5,
+          "searchMs": 47.66249999997672,
+          "e2eMs": 103,
+          "displayMs": 103.39999999850988
+        },
+        {
+          "repetition": 2,
+          "query": "中文全文搜索使用什么分词器？",
+          "ids": [
+            "fulltext",
+            "hybrid",
+            "hnsw",
+            "chunking",
+            "collections"
+          ],
+          "relevant": [
+            "fulltext"
+          ],
+          "recall": 1,
+          "ndcg": 1,
+          "queryEmbedMs": 46.29999999701977,
+          "searchMs": 50.648799999966286,
+          "e2eMs": 126,
+          "displayMs": 126.70000000298023
+        },
+        {
+          "repetition": 2,
+          "query": "断开互联网之后还能进行向量化吗？",
+          "ids": [
+            "hnsw",
+            "batching",
+            "timing",
+            "hybrid",
+            "quantization"
+          ],
+          "relevant": [
+            "offline"
+          ],
+          "recall": 0,
+          "ndcg": 0,
+          "queryEmbedMs": 51,
+          "searchMs": 52.680099999997765,
+          "e2eMs": 128.70000000298023,
+          "displayMs": 129.10000000149012
+        }
+      ],
+      "browserVersion": "157.0.4341.42",
+      "externalRequests": [],
+      "browserErrors": [],
+      "summary": {
+        "throughput": 67.64374295576545,
+        "importTotalMs": 1268.6000000014901,
+        "embedMs": 354.7999999895692,
+        "writeMs": 174.71570000005886,
+        "refreshMs": 567.2689000000246,
+        "queryEmbedMs": 29.75,
+        "searchMs": 51.04269999999087,
+        "e2eMs": 106.69999999925494,
+        "displayMs": 107.19999999925494,
+        "recall5": 0.9375,
+        "ndcg5": 0.8761114100503749
+      }
+    }
+  ]
+}

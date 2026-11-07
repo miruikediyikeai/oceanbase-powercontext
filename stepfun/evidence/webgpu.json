@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-07T13:37:40.088Z",
+  "appUrl": "http://127.0.0.1:5173",
+  "browser": "157.0.4341.42",
+  "backend": "WEBGPU",
+  "precision": "FP16",
+  "firstSource": "WebGPU 降级策略.md",
+  "timings": "5 条结果 · 查询向量化 132 ms · seekdb 63 ms · 端到端 221 ms",
+  "logs": "13:37:40  数据库连接成功 · 5.7.25-OceanBase seekdb-v1.4.0.0\n13:37:41  示例语料已就绪\n13:37:46  模型就绪 · WEBGPU / fp16 · 5158 ms\n13:37:50  导入完成 · 24 片段 · 向量化 2677 ms · 写入 322 ms · 刷新 474 ms\n13:37:51  检索完成 · 5 条 · seekdb 63 ms · 展示 289 ms",
+  "errors": [],
+  "externalRequests": [],
+  "passed": true
+}

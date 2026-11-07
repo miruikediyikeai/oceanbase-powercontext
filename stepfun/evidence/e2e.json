@@ -1,0 +1,248 @@
+{
+  "at": "2026-11-07T13:37:40.461Z",
+  "appUrl": "http://127.0.0.1:5173",
+  "checks": [
+    "catalog and data recovered through a new DB session",
+    "automatic WASM fallback with unavailable GPU",
+    "WASM local embedding",
+    "512-dimensional normalized vectors",
+    "idempotent upsert",
+    "incremental import visible after refresh",
+    "collection isolation",
+    "database hybrid search",
+    "vector-only search",
+    "concurrent collection queries",
+    "invalid vector rejected",
+    "UI sample and pasted document import and search",
+    "manual index refresh",
+    "cross-origin API writes rejected",
+    "backend visible",
+    "mobile viewport without overflow",
+    "all external hosts blocked"
+  ],
+  "browser": "157.0.4341.42",
+  "result": {
+    "info": {
+      "backend": "wasm",
+      "precision": "q8",
+      "loadMs": 3288,
+      "fallbackReason": "浏览器未提供可用 WebGPU adapter",
+      "cached": false,
+      "modelFetchWallMs": 698.2000000029802,
+      "modelResources": [
+        {
+          "file": "Xenova/bge-small-zh-v1.5/tokenizer.json",
+          "durationMs": 121.20000000298023,
+          "transferBytes": 439425,
+          "decodedBytes": 439125,
+          "startTime": 262.3999999985099,
+          "responseEnd": 383.6000000014901
+        },
+        {
+          "file": "Xenova/bge-small-zh-v1.5/tokenizer_config.json",
+          "durationMs": 86,
+          "transferBytes": 667,
+          "decodedBytes": 367,
+          "startTime": 266.1000000014901,
+          "responseEnd": 352.1000000014901
+        },
+        {
+          "file": "Xenova/bge-small-zh-v1.5/config.json",
+          "durationMs": 84,
+          "transferBytes": 1016,
+          "decodedBytes": 716,
+          "startTime": 275.6000000014901,
+          "responseEnd": 359.6000000014901
+        },
+        {
+          "file": "Xenova/bge-small-zh-v1.5/onnx/model_quantized.onnx",
+          "durationMs": 479.8999999985099,
+          "transferBytes": 24011142,
+          "decodedBytes": 24010842,
+          "startTime": 480.70000000298023,
+          "responseEnd": 960.6000000014901
+        }
+      ]
+    },
+    "collections": [
+      "kb_e2e_a_1794058663982",
+      "kb_e2e_b_1794058663982"
+    ],
+    "countFirst": 1,
+    "countRepeat": 1,
+    "importTiming": {
+      "chunks": 1,
+      "embedMs": 425.1000000014901,
+      "writeMs": 254.00780000002123,
+      "refreshMs": 396.50380000000587,
+      "totalMs": 1205.1000000014901,
+      "throughput": 2.352387673480345
+    },
+    "incremental": {
+      "searchMs": 80.0445999999938,
+      "mode": "hybrid",
+      "results": [
+        {
+          "id": "ed487eacffce03e0dc9cb0f1c71d5a27ad9f948e5397ce0672260627f9674f7b",
+          "text": "青竹白鹭项目利用太阳能淡化海水，项目编号 BAMBOO-928。",
+          "metadata": {
+            "chunk": 0,
+            "source": "新增文档.md",
+            "documentId": "second",
+            "importedAt": "2026-11-07T13:37:47.448Z"
+          },
+          "score": 0.0328
+        },
+        {
+          "id": "1d742372b966edefce0b64ff70b33d891b3aa3e8f31711f5dd325f16e27fbfc0",
+          "text": "极光紫丁香号探测器在木星轨道进行磁场测量，任务编号 AURORA-731。",
+          "metadata": {
+            "chunk": 0,
+            "source": "第一份.md",
+            "documentId": "first",
+            "importedAt": "2026-11-07T13:37:46.201Z"
+          },
+          "score": 0.0161
+        }
+      ],
+      "queryEmbedMs": 56.5,
+      "e2eMs": 225.70000000298023
+    },
+    "isolated": {
+      "searchMs": 54.42160000000149,
+      "mode": "hybrid",
+      "results": [
+        {
+          "id": "4050d6ee39bcb2c191bac12286bea57000a18a84866234c4166f411405a4a7ed",
+          "text": "银杏渡船计划在山区修建图书馆，项目编号 GINKGO-615。",
+          "metadata": {
+            "chunk": 0,
+            "source": "其他知识库.md",
+            "documentId": "other",
+            "importedAt": "2026-11-07T13:37:48.601Z"
+          },
+          "score": 0.0164
+        }
+      ],
+      "queryEmbedMs": 44.899999998509884,
+      "e2eMs": 124.60000000149012
+    },
+    "original": {
+      "searchMs": 58.94180000000051,
+      "mode": "hybrid",
+      "results": [
+        {
+          "id": "1d742372b966edefce0b64ff70b33d891b3aa3e8f31711f5dd325f16e27fbfc0",
+          "text": "极光紫丁香号探测器在木星轨道进行磁场测量，任务编号 AURORA-731。",
+          "metadata": {
+            "chunk": 0,
+            "source": "第一份.md",
+            "documentId": "first",
+            "importedAt": "2026-11-07T13:37:46.201Z"
+          },
+          "score": 0.0328
+        },
+        {
+          "id": "ed487eacffce03e0dc9cb0f1c71d5a27ad9f948e5397ce0672260627f9674f7b",
+          "text": "青竹白鹭项目利用太阳能淡化海水，项目编号 BAMBOO-928。",
+          "metadata": {
+            "chunk": 0,
+            "source": "新增文档.md",
+            "documentId": "second",
+            "importedAt": "2026-11-07T13:37:47.448Z"
+          },
+          "score": 0.0161
+        }
+      ],
+      "queryEmbedMs": 53.899999998509884,
+      "e2eMs": 146.40000000596046
+    },
+    "vectorOnly": {
+      "searchMs": 50.281999999977415,
+      "mode": "vector",
+      "results": [
+        {
+          "id": "1d742372b966edefce0b64ff70b33d891b3aa3e8f31711f5dd325f16e27fbfc0",
+          "text": "极光紫丁香号探测器在木星轨道进行磁场测量，任务编号 AURORA-731。",
+          "metadata": {
+            "chunk": 0,
+            "source": "第一份.md",
+            "documentId": "first",
+            "importedAt": "2026-11-07T13:37:46.201Z"
+          },
+          "score": 0.4259199080658015
+        },
+        {
+          "id": "ed487eacffce03e0dc9cb0f1c71d5a27ad9f948e5397ce0672260627f9674f7b",
+          "text": "青竹白鹭项目利用太阳能淡化海水，项目编号 BAMBOO-928。",
+          "metadata": {
+            "chunk": 0,
+            "source": "新增文档.md",
+            "documentId": "second",
+            "importedAt": "2026-11-07T13:37:47.448Z"
+          },
+          "score": 0.7381865382194222
+        }
+      ],
+      "queryEmbedMs": 69.39999999850988,
+      "e2eMs": 222.29999999701977
+    },
+    "concurrent": [
+      {
+        "searchMs": 66.58939999999711,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "1d742372b966edefce0b64ff70b33d891b3aa3e8f31711f5dd325f16e27fbfc0",
+            "text": "极光紫丁香号探测器在木星轨道进行磁场测量，任务编号 AURORA-731。",
+            "metadata": {
+              "chunk": 0,
+              "source": "第一份.md",
+              "documentId": "first",
+              "importedAt": "2026-11-07T13:37:46.201Z"
+            },
+            "score": 0.0328
+          },
+          {
+            "id": "ed487eacffce03e0dc9cb0f1c71d5a27ad9f948e5397ce0672260627f9674f7b",
+            "text": "青竹白鹭项目利用太阳能淡化海水，项目编号 BAMBOO-928。",
+            "metadata": {
+              "chunk": 0,
+              "source": "新增文档.md",
+              "documentId": "second",
+              "importedAt": "2026-11-07T13:37:47.448Z"
+            },
+            "score": 0.0161
+          }
+        ],
+        "queryEmbedMs": 71.10000000149012,
+        "e2eMs": 213.5
+      },
+      {
+        "searchMs": 50.72380000000703,
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "4050d6ee39bcb2c191bac12286bea57000a18a84866234c4166f411405a4a7ed",
+            "text": "银杏渡船计划在山区修建图书馆，项目编号 GINKGO-615。",
+            "metadata": {
+              "chunk": 0,
+              "source": "其他知识库.md",
+              "documentId": "other",
+              "importedAt": "2026-11-07T13:37:48.601Z"
+            },
+            "score": 0.0328
+          }
+        ],
+        "queryEmbedMs": 150.70000000298023,
+        "e2eMs": 385.5
+      }
+    ],
+    "vectorDimension": 512,
+    "vectorNorm": 0.9999998515361942,
+    "invalidStatus": 400
+  },
+  "errors": [],
+  "externalRequests": [],
+  "passed": true
+}
